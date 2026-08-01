@@ -8,6 +8,18 @@ import { getSession } from '../lib/auth';
 import AdminBar from '../components/AdminBar';
 import UserBar from '../components/UserBar';
 
+// ─── Couleurs par catégorie — badges + filtres (repérage visuel rapide) ──────
+const CATEGORY_STYLES = {
+  Image: { badgeClass: 'badge-cat-image', color: '#2B80FF' },
+  Lumière: { badgeClass: 'badge-cat-lumiere', color: '#d97706' },
+  Machinerie: { badgeClass: 'badge-cat-machinerie', color: '#52525b' },
+  Audio: { badgeClass: 'badge-cat-audio', color: '#7c3aed' },
+  'Régie vidéo': { badgeClass: 'badge-cat-regie', color: '#0891b2' },
+};
+function categoryStyle(category) {
+  return CATEGORY_STYLES[category] || { badgeClass: 'badge-blue', color: '#2B80FF' };
+}
+
 // ─── Texte éditable en place (mode admin uniquement) ─────────────────────────
 function EditableText({ isAdmin, value, onSave, tag: Tag = 'span', multiline = false, className, style }) {
   const [editing, setEditing] = useState(false);
@@ -183,7 +195,11 @@ function TopicDetailModal({ topic, onClose, onRegister }) {
     <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className="modal" style={{ maxWidth: 640, maxHeight: '85vh', overflowY: 'auto' }}>
         <button className="modal-close" onClick={onClose}>✕</button>
-        {topic.category && <span className="badge badge-blue" style={{ marginBottom: 8, display: 'inline-block' }}>{topic.category}</span>}
+        {topic.category && (
+          <span className={`badge ${categoryStyle(topic.category).badgeClass}`} style={{ marginBottom: 8, display: 'inline-block' }}>
+            {topic.category}
+          </span>
+        )}
         <h2>{topic.title}</h2>
         <div className="level" style={{ marginTop: 4 }}>
           {[topic.level, topic.price || PRICE_LABEL, topic.duration || '1 journée (9h–18h)'].filter(Boolean).join(' · ')}
@@ -251,7 +267,7 @@ function TopicCard({ topic, index, isAdmin, onOpenRegister, onSaved }) {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
         <div className="idx">Formation {String(index + 1).padStart(2, '0')}</div>
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-          {topic.category && <span className="badge badge-blue">{topic.category}</span>}
+          {topic.category && <span className={`badge ${categoryStyle(topic.category).badgeClass}`}>{topic.category}</span>}
           {topic.archived && <span className="badge badge-gray">Archivée</span>}
         </div>
       </div>
@@ -859,9 +875,11 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
                       <div className="topic-title">{s.topic.title}</div>
                       <div className="date-label">{s.dateLabel}</div>
                     </div>
-                    <div className="bar-track">
-                      <div className={`bar-fill ${s.validated ? 'full' : ''}`} style={{ width: `${pct}%` }} />
-                      <div className="bar-label">{s.count}/{s.capacity} inscrits{s.validated ? ' · validée' : ''}</div>
+                    <div className="bar-col">
+                      <div className="bar-track">
+                        <div className={`bar-fill ${s.validated ? 'full' : ''}`} style={{ width: `${pct}%` }} />
+                      </div>
+                      <div className="bar-count">{s.count}/{s.capacity} inscrits{s.validated ? ' · validée' : ''}</div>
                     </div>
                     <div className="action">
                       {badge}
@@ -925,16 +943,21 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
               >
                 Toutes
               </button>
-              {usedCategories.map((c) => (
-                <button
-                  key={c}
-                  type="button"
-                  className={`filter-pill ${categoryFilter === c ? 'active' : ''}`}
-                  onClick={() => setCategoryFilter(c)}
-                >
-                  {c}
-                </button>
-              ))}
+              {usedCategories.map((c) => {
+                const isActive = categoryFilter === c;
+                const { color } = categoryStyle(c);
+                return (
+                  <button
+                    key={c}
+                    type="button"
+                    className={`filter-pill ${isActive ? 'active' : ''}`}
+                    style={isActive ? { background: color, borderColor: color } : undefined}
+                    onClick={() => setCategoryFilter(c)}
+                  >
+                    {c}
+                  </button>
+                );
+              })}
             </div>
           )}
 
