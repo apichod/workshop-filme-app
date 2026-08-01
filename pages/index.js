@@ -379,7 +379,7 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
     <>
       <Head>
         <title>Workshops Filme — Ateliers du samedi</title>
-        <meta name="description" content="Ateliers pratiques du samedi chez Filme : prise en main du matériel de location, 149 € HT, 6 places maximum." />
+        <meta name="description" content={`Ateliers pratiques du samedi chez Filme : prise en main du matériel de location, 149 € HT, ${CAPACITY} places maximum.`} />
       </Head>
 
       {isAdmin && <AdminBar email={admin.email} />}
@@ -499,7 +499,7 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
           <div className="modal">
             <button className="modal-close" onClick={closeModal}>✕</button>
             <h2>S'inscrire à un workshop</h2>
-            <div className="modal-sub">{PRICE_LABEL} — 6 places maximum · vous pouvez cocher plusieurs samedis pour la même formation</div>
+            <div className="modal-sub">{PRICE_LABEL} — {CAPACITY} places maximum · vous pouvez cocher plusieurs samedis pour la même formation</div>
 
             <form onSubmit={submit}>
               <div className="form-group">
