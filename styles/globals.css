@@ -79,6 +79,8 @@ a { color: var(--accent); }
   white-space: normal;
 }
 
+/* Boutons — même palette/forme que cvp.com/events : primaire en noir plein,
+   secondaire en blanc + bordure fine, coins légèrement arrondis (8px). */
 .btn {
   display: inline-flex;
   align-items: center;
@@ -86,19 +88,20 @@ a { color: var(--accent); }
   padding: 9px 18px;
   border-radius: var(--radius);
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 500;
   font-family: inherit;
   cursor: pointer;
   border: 1px solid transparent;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
   transition: background 0.15s, border-color 0.15s, opacity 0.15s;
   text-decoration: none;
   white-space: nowrap;
 }
 .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-.btn-primary { background: var(--accent); color: #fff; border-color: var(--accent); }
-.btn-primary:hover:not(:disabled) { background: var(--primary); border-color: var(--primary); }
-.btn-ghost { background: transparent; color: var(--text-muted); border-color: var(--border); }
-.btn-ghost:hover:not(:disabled) { background: var(--bg); color: var(--text); border-color: rgba(20, 2, 2, 0.3); }
+.btn-primary { background: var(--text); color: #fff; border-color: var(--text); }
+.btn-primary:hover:not(:disabled) { background: #2b2b2b; border-color: #2b2b2b; }
+.btn-ghost { background: transparent; color: var(--text); border-color: var(--border); }
+.btn-ghost:hover:not(:disabled) { background: var(--bg); color: var(--text); border-color: var(--text); }
 .btn-sm { padding: 5px 12px; font-size: 13px; }
 
 .form-group { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
