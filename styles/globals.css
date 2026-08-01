@@ -19,7 +19,7 @@
   --border-focus: #2B80FF;
   --green:        #00AD6F;
   --red:          #F53669;
-  --radius:       8px;
+  --radius:       6px;
   --shadow:       0 1px 4px rgba(0,0,0,0.06), 0 2px 16px rgba(0,0,0,0.04);
   --font-body:    'Source Sans Pro', sans-serif;
   --font-heading: 'Open Sans', sans-serif;
@@ -31,6 +31,7 @@ body {
   font-family: var(--font-body);
   background: var(--bg);
   color: var(--text);
+  font-size: 14px;
   line-height: 1.5;
   letter-spacing: 0.4px;
   -webkit-font-smoothing: antialiased;
@@ -215,10 +216,11 @@ h1, h2, h3, .hero h1, .section-head h2, .topic-card h3 { font-family: var(--font
 
 /* ─── Page workshop — layout ─────────────────────────────────────────────── */
 
+/* Largeur/marges alignées sur --page-width du thème Dawn (1200px, 50px de marge) */
 .page {
-  max-width: 1080px;
+  max-width: 1200px;
   margin: 0 auto;
-  padding: 0 24px 80px;
+  padding: 0 50px 80px;
 }
 
 .hero {
