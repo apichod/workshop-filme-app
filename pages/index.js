@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import Head from 'next/head';
 import { getOpenSessions } from '../lib/sessions';
-import { getVisibleTopics, getAllTopics, CAPACITY, PRICE_LABEL, nextSaturdays, formatSaturday } from '../lib/topics';
+import { getVisibleTopics, getAllTopics, CAPACITY, VALIDATION_THRESHOLD, PRICE_LABEL, nextSaturdays, formatSaturday } from '../lib/topics';
 import { getSiteContent, CONTENT_DEFAULTS } from '../lib/content';
 import { getSession } from '../lib/auth';
 import AdminBar from '../components/AdminBar';
@@ -368,7 +368,7 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
   }
 
   function resultLabel(r) {
-    if (r.ok) return r.validated ? '🎉 Formation validée !' : `Confirmée (${CAPACITY - r.count} place(s) restante(s))`;
+    if (r.ok) return r.validated ? '🎉 Formation validée !' : `Confirmée (${Math.max(0, VALIDATION_THRESHOLD - r.count)} inscription(s) avant validation)`;
     if (r.error === 'full') return 'Session déjà complète';
     if (r.error === 'already_registered') return 'Déjà inscrit(e) sur cette session';
     if (r.error === 'topic_archived') return "Cette formation n'est plus proposée";
@@ -411,9 +411,10 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
             ) : (
               sessions.map((s) => {
                 const pct = Math.min(100, Math.round(s.rate * 100));
-                let badge = <span className="badge badge-gray">{CAPACITY - s.count} places dispo</span>;
+                const isFull = s.count >= s.capacity;
+                let badge = <span className="badge badge-gray">{Math.max(0, s.capacity - s.count)} places dispo</span>;
                 if (s.validated) badge = <span className="badge badge-green">✅ Formation validée</span>;
-                else if (s.rate >= 0.5) badge = <span className="badge badge-amber">🔥 {CAPACITY - s.count} place(s) restante(s)</span>;
+                else if (s.rate >= 0.5) badge = <span className="badge badge-amber">🔥 {Math.max(0, s.threshold - s.count)} avant validation</span>;
 
                 return (
                   <div className="chart-row" key={s.id}>
@@ -423,16 +424,16 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
                     </div>
                     <div className="bar-track">
                       <div className={`bar-fill ${s.validated ? 'full' : ''}`} style={{ width: `${pct}%` }} />
-                      <div className="bar-label">{s.count}/{CAPACITY} inscrits · {pct}%</div>
+                      <div className="bar-label">{s.count}/{s.capacity} inscrits{s.validated ? ' · validée' : ''}</div>
                     </div>
                     <div className="action">
                       {badge}
                       <button
                         className="btn btn-ghost btn-sm"
-                        disabled={s.validated}
+                        disabled={isFull}
                         onClick={() => openModal(s.topicId, s.dateIso)}
                       >
-                        {s.validated ? 'Complet' : "S'inscrire"}
+                        {isFull ? 'Complet' : "S'inscrire"}
                       </button>
                     </div>
                   </div>

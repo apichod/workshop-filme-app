@@ -1,7 +1,7 @@
 import { supabaseAdmin } from '../../lib/supabase';
 import { getCustomerByEmail } from '../../lib/booqable';
 import { sendWorkshopConfirmation, sendWorkshopValidated } from '../../lib/mailer';
-import { CAPACITY, getTopicById, isValidSaturday, formatSaturday } from '../../lib/topics';
+import { CAPACITY, VALIDATION_THRESHOLD, getTopicById, isValidSaturday, formatSaturday } from '../../lib/topics';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Méthode non autorisée' });
@@ -46,13 +46,15 @@ export default async function handler(req, res) {
       session = created;
     }
 
-    if (session.validated) return res.status(409).json({ error: 'full' });
+    const wasValidated = session.validated;
 
     const { count, error: countErr } = await supabaseAdmin
       .from('workshop_registrations')
       .select('*', { count: 'exact', head: true })
       .eq('session_id', session.id);
     if (countErr) throw countErr;
+    // Une session validée (>= seuil) reste ouverte aux inscriptions jusqu'à la
+    // capacité max — seule la capacité bloque, pas la validation.
     if ((count || 0) >= CAPACITY) return res.status(409).json({ error: 'full' });
 
     // ─── Inscription (unique par session+email, cf. supabase.sql) ───
@@ -66,10 +68,13 @@ export default async function handler(req, res) {
     }
 
     const newCount = (count || 0) + 1;
-    const nowFull = newCount >= CAPACITY;
     const dateLabel = formatSaturday(dateIso);
+    const justCrossedThreshold = !wasValidated && newCount >= VALIDATION_THRESHOLD;
+    const nowValidated = wasValidated || justCrossedThreshold;
 
-    if (nowFull) {
+    if (justCrossedThreshold) {
+      // Première fois que le seuil est atteint : on marque la session validée
+      // et on prévient TOUS les inscrits (pas seulement le dernier).
       await supabaseAdmin.from('workshop_sessions').update({ validated: true }).eq('id', session.id);
       const { data: registrants } = await supabaseAdmin
         .from('workshop_registrations')
@@ -77,10 +82,18 @@ export default async function handler(req, res) {
         .eq('session_id', session.id);
       await sendWorkshopValidated(registrants || [], topic, dateLabel);
     } else {
-      await sendWorkshopConfirmation(normalizedEmail, name.trim(), topic, dateLabel, CAPACITY - newCount);
+      await sendWorkshopConfirmation(normalizedEmail, name.trim(), topic, dateLabel, {
+        alreadyValidated: nowValidated,
+        placesBeforeValidation: Math.max(0, VALIDATION_THRESHOLD - newCount),
+      });
     }
 
-    return res.status(200).json({ ok: true, count: newCount, validated: nowFull });
+    return res.status(200).json({
+      ok: true,
+      count: newCount,
+      validated: nowValidated,
+      full: newCount >= CAPACITY,
+    });
   } catch (err) {
     console.error('[api/register]', err);
     return res.status(500).json({ error: 'Erreur serveur, réessayez.' });
