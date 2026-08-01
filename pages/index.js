@@ -260,7 +260,7 @@ function TopicDetailModal({ topic, onClose, onRegister }) {
           <button type="button" className="btn btn-ghost" onClick={onClose}>Fermer</button>
           {!topic.archived && (
             <button type="button" className="btn btn-primary" onClick={() => { onRegister(topic.id); onClose(); }}>
-              Indiquer ses disponibilités
+              S'inscrire <Icon name="arrowRight" size={14} />
             </button>
           )}
         </div>
@@ -312,7 +312,7 @@ function TopicCard({ topic, index, isAdmin, onOpenRegister, onSaved }) {
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
         {!topic.archived && (
           <button className="btn btn-primary btn-sm" onClick={() => onOpenRegister(topic.id)}>
-            Indiquer ses disponibilités
+            S'inscrire <Icon name="arrowRight" size={14} />
           </button>
         )}
         <button type="button" className="link-btn" onClick={() => setShowDetail(true)}>En savoir plus</button>
