@@ -728,7 +728,11 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
   const saturdays = nextSaturdays(8, closedDates);
   const selectableTopics = topics.filter((t) => !t.archived);
   const usedCategories = TOPIC_CATEGORIES.filter((c) => topics.some((t) => t.category === c));
-  const filteredTopics = categoryFilter ? topics.filter((t) => t.category === categoryFilter) : topics;
+  // Les formations archivées sont reléguées à la fin de la grille (tri stable
+  // par ailleurs : sort() est stable en JS, l'ordre existant est préservé).
+  const filteredTopics = (categoryFilter ? topics.filter((t) => t.category === categoryFilter) : topics)
+    .slice()
+    .sort((a, b) => (a.archived === b.archived ? 0 : a.archived ? 1 : -1));
   const sortedSessions = [...sessions].sort((a, b) =>
     sessionSort === 'date'
       ? a.dateIso.localeCompare(b.dateIso)
@@ -966,7 +970,7 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
         </section>
 
         <section className="section">
-          <div className="card" style={{ padding: '28px 24px' }}>
+          <div style={{ padding: '28px 0' }}>
             <div className="timeline">
               {[1, 2, 3, 4].map((n, i) => (
                 <div className="timeline-step" key={n}>

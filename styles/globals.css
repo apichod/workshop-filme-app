@@ -13,7 +13,7 @@
   --surface:      #ffffff;
   /* Aplat gris uni utilisé pour les cartes (catégories, formations, connexion…) —
      filme.fr n'a aucun relief (ni bordure ni ombre) sur ce type de bloc. */
-  --card-bg:      #f0f0f0;
+  --card-bg:      #f2f2f2;
   --primary:      #395DB8;
   --accent:       #2B80FF;
   --text:         #121212;
@@ -41,7 +41,8 @@ body {
   letter-spacing: 0.4px;
   -webkit-font-smoothing: antialiased;
 }
-a { color: var(--accent); }
+a { color: var(--text); text-decoration: none; }
+a:hover { text-decoration: underline; text-underline-offset: 3px; }
 h1, h2, h3, .section-head h2, .topic-card h3 { font-family: var(--font-heading-family); letter-spacing: 0.6px; }
 
 /* ─── Cards / badges / boutons / forms / modale (repris de portail-filme) ─── */
@@ -400,7 +401,13 @@ h1, h2, h3, .section-head h2, .topic-card h3 { font-family: var(--font-heading-f
 
 /* ─── Grille des formations ────────────────────────────────────────────────── */
 
-.topics-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
+.topics-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+@media screen and (max-width: 900px) {
+  .topics-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media screen and (max-width: 600px) {
+  .topics-grid { grid-template-columns: 1fr; }
+}
 .topic-card {
   padding: 20px; display: flex; flex-direction: column; gap: 10px;
   animation: topic-card-in 0.25s ease;
@@ -513,14 +520,15 @@ footer.page-footer { color: var(--text-muted); font-size: 13px; padding-top: 20p
   background: none;
   border: none;
   padding: 0;
-  color: var(--accent);
-  text-decoration: underline;
+  color: var(--text);
+  text-decoration: none;
   text-underline-offset: 3px;
   font-size: 14px;
   font-weight: 400;
   cursor: pointer;
   font-family: inherit;
 }
+.link-btn:hover { text-decoration: underline; }
 
 @media (max-width: 720px) {
   .timeline { flex-direction: column; gap: 20px; }
