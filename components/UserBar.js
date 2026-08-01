@@ -2,12 +2,12 @@
 // admin) — distinct du bandeau Admin (AdminBar) qui, lui, ne s'affiche qu'en
 // plus, pour les administrateurs, et se concentre sur les outils d'admin
 // (recherche client, préférences).
-export default function UserBar({ session, offset = false }) {
+export default function UserBar({ session }) {
   return (
     <div
       style={{
         position: 'fixed',
-        top: offset ? 66 : 12,
+        top: 12,
         right: 16,
         zIndex: 60,
         background: '#fff',

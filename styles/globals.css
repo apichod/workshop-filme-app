@@ -11,6 +11,9 @@
 :root {
   --bg:           #ffffff;
   --surface:      #ffffff;
+  /* Aplat gris uni utilisé pour les cartes (catégories, formations, connexion…) —
+     filme.fr n'a aucun relief (ni bordure ni ombre) sur ce type de bloc. */
+  --card-bg:      #f0f0f0;
   --primary:      #395DB8;
   --accent:       #2B80FF;
   --text:         #121212;
@@ -23,7 +26,6 @@
   --green:        #00AD6F;
   --red:          #F53669;
   --radius:       6px;
-  --shadow:       0 1px 4px rgba(0,0,0,0.06), 0 2px 16px rgba(0,0,0,0.04);
   --font-body-family:    'Source Sans Pro', sans-serif;
   --font-heading-family: 'Open Sans', sans-serif;
 }
@@ -44,12 +46,12 @@ h1, h2, h3, .section-head h2, .topic-card h3 { font-family: var(--font-heading-f
 
 /* ─── Cards / badges / boutons / forms / modale (repris de portail-filme) ─── */
 
+/* Aplat gris uni, sans bordure ni ombre — comme les blocs catégorie de
+   filme.fr (aucun "relief" dans leur DA, juste des à-plats de couleur). */
 .card {
-  background: var(--surface);
-  border: 1px solid var(--border);
+  background: var(--card-bg);
   border-radius: var(--radius);
   overflow: hidden;
-  box-shadow: var(--shadow);
 }
 
 .badge {
@@ -170,14 +172,12 @@ h1, h2, h3, .section-head h2, .topic-card h3 { font-family: var(--font-heading-f
   margin-top: 12px;
 }
 
-/* Carte de connexion (page /login) */
+/* Carte de connexion (page /login) — même aplat gris que .card, sans relief */
 .form-card {
   width: 100%;
   max-width: 380px;
-  background: var(--surface);
-  border: 1px solid var(--border);
+  background: var(--card-bg);
   border-radius: var(--radius);
-  box-shadow: var(--shadow);
   padding: 32px 28px;
 }
 .form-logo { margin-bottom: 18px; }
@@ -200,11 +200,10 @@ h1, h2, h3, .section-head h2, .topic-card h3 { font-family: var(--font-heading-f
 }
 .modal {
   background: var(--surface);
-  border-radius: 12px;
+  border-radius: var(--radius);
   padding: 32px;
   max-width: 440px;
   width: 100%;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.2);
   position: relative;
 }
 .modal h2 { font-size: 18px; font-weight: 700; margin-bottom: 4px; }

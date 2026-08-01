@@ -39,8 +39,8 @@ export default function AdminHome({ admin }) {
         <meta name="robots" content="noindex" />
       </Head>
       <AdminBar />
-      <UserBar session={admin} offset />
-      <div style={{ maxWidth: 780, margin: '0 auto', padding: '80px 24px 60px' }}>
+      <UserBar session={admin} />
+      <div style={{ maxWidth: 780, margin: '0 auto', padding: '40px 24px 80px' }}>
         <div className="page-header">
           <h1>Consulter un client</h1>
           <p style={{ color: 'var(--text-muted)', fontSize: 13 }}>

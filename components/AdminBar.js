@@ -19,13 +19,13 @@ export default function AdminBar({ onOpenPreferences }) {
     <div
       style={{
         background: '#fff',
-        borderBottom: '1px solid rgba(20,2,2,0.12)',
+        borderTop: '1px solid rgba(20,2,2,0.12)',
         padding: '10px 24px',
         display: 'flex',
         alignItems: 'center',
         gap: 12,
         position: 'fixed',
-        top: 0,
+        bottom: 0,
         left: 0,
         right: 0,
         zIndex: 50,

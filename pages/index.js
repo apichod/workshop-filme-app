@@ -847,9 +847,9 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
       </Head>
 
       {isAdmin && <AdminBar onOpenPreferences={() => setShowPreferences(true)} />}
-      <UserBar session={session} offset={isAdmin} />
+      <UserBar session={session} />
 
-      <div className="page-crumb" style={isAdmin ? { paddingTop: 56 } : undefined}>
+      <div className="page-crumb">
         <div className="brand-crumb">
           <a href="https://www.filme.fr" title="Retour à filme.fr">
             <img src="https://www.filme.fr/cdn/shop/files/Filme-Logo-sd.svg?v=1707646401&width=120" alt="Filme" className="logo" />
@@ -888,7 +888,7 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
         </div>
       </section>
 
-      <div className="page">
+      <div className="page" style={isAdmin ? { paddingBottom: 70 } : undefined}>
         <section className="section">
           <div className="section-head">
             <div>
