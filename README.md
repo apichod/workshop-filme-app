@@ -87,6 +87,13 @@ façon d'envoyer des emails (`lib/mailer.js`, Gmail SMTP via nodemailer).
   complète (avec descriptif/programme/prix/durée) se fait via la popup sur la
   homepage.
 - **Build vérifié** (`next build` passe sans erreur).
+- **`supabase_check.sql`** — requête de diagnostic (lecture seule) : liste
+  toutes les tables/colonnes/contraintes attendues et indique si chacune
+  existe déjà dans votre base Supabase. Utile après une erreur du type
+  `Could not find the table 'public.xxx' in the schema cache`.
+- **`supabase_repair_all.sql`** — regroupe toutes les migrations du projet en
+  un seul script idempotent (safe à relancer à tout moment) : ne fait rien sur
+  ce qui existe déjà, crée uniquement ce qui manque.
 
 ## Mise en route
 

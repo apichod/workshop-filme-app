@@ -720,14 +720,11 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
             ) : (
               sessions.map((s) => {
                 // La barre représente la capacité max (1 inscrit = 1/capacity de la
-                // largeur) ; le seuil de validation est marqué par un repère fixe,
-                // et le remplissage passe au vert une fois ce seuil atteint.
+                // largeur), et le remplissage passe au vert une fois le seuil de
+                // validation atteint.
                 const pct = Math.min(100, Math.round((s.count / s.capacity) * 100));
-                const thresholdPct = Math.min(100, Math.round((s.threshold / s.capacity) * 100));
                 const isFull = s.count >= s.capacity;
-                let badge = <span className="badge badge-gray">{Math.max(0, s.capacity - s.count)} places dispo</span>;
-                if (s.validated) badge = <span className="badge badge-green">✅ Formation validée</span>;
-                else if (s.rate >= 0.5) badge = <span className="badge badge-amber">🔥 {Math.max(0, s.threshold - s.count)} avant validation</span>;
+                const badge = <span className="badge badge-gray">{Math.max(0, s.capacity - s.count)} places dispo</span>;
 
                 return (
                   <div className="chart-row" key={s.id}>
@@ -736,11 +733,6 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
                       <div className="date-label">{s.dateLabel}</div>
                     </div>
                     <div className="bar-track">
-                      <div
-                        className="bar-threshold-marker"
-                        style={{ left: `${thresholdPct}%` }}
-                        title={`Seuil de validation : ${s.threshold} inscrits`}
-                      />
                       <div className={`bar-fill ${s.validated ? 'full' : ''}`} style={{ width: `${pct}%` }} />
                       <div className="bar-label">{s.count}/{s.capacity} inscrits{s.validated ? ' · validée' : ''}</div>
                     </div>
