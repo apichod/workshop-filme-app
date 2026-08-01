@@ -222,6 +222,55 @@ function NewTopicCard({ onCreated }) {
   );
 }
 
+// ─── Popup Conditions générales de participation ─────────────────────────────
+function TermsModal({ isAdmin, text, onSave, onClose }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(text);
+  const [loading, setLoading] = useState(false);
+
+  async function save() {
+    setLoading(true);
+    await onSave(draft);
+    setLoading(false);
+    setEditing(false);
+  }
+
+  return (
+    <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="modal" style={{ maxWidth: 640, maxHeight: '85vh', overflowY: 'auto' }}>
+        <button className="modal-close" onClick={onClose}>✕</button>
+        <h2>Conditions générales de participation</h2>
+
+        {editing ? (
+          <>
+            <textarea
+              className="form-input"
+              rows={20}
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              style={{ fontFamily: 'inherit', fontSize: 13, marginTop: 16 }}
+            />
+            <div className="modal-actions">
+              <button type="button" className="btn btn-ghost" onClick={() => { setDraft(text); setEditing(false); }}>Annuler</button>
+              <button type="button" className="btn btn-primary" onClick={save} disabled={loading}>
+                {loading ? 'Enregistrement…' : 'Enregistrer'}
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <div style={{ whiteSpace: 'pre-wrap', fontSize: 13.5, color: 'var(--text)', lineHeight: 1.7, marginTop: 16 }}>{text}</div>
+            <div className="modal-actions">
+              {isAdmin && <button type="button" className="btn btn-ghost" onClick={() => setEditing(true)}>✏️ Éditer</button>}
+              <button type="button" className="btn btn-primary" onClick={onClose}>Fermer</button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function Home({ initialSessions, initialTopics, initialContent, isAdmin, admin }) {
   const [sessions, setSessions] = useState(initialSessions);
   const [topics, setTopics] = useState(initialTopics);
@@ -229,6 +278,7 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
   const [modal, setModal] = useState(null); // { topicId, dates: string[] }
   const [form, setForm] = useState({ name: '', email: '' });
   const [status, setStatus] = useState({ loading: false, error: '', results: [] });
+  const [showTerms, setShowTerms] = useState(false);
 
   const saturdays = nextSaturdays(8);
   const selectableTopics = topics.filter((t) => !t.archived);
@@ -393,6 +443,30 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
         </section>
 
         <section className="section">
+          <div className="card" style={{ padding: '28px 24px' }}>
+            <div className="timeline">
+              {[1, 2, 3, 4].map((n) => (
+                <div className="timeline-step" key={n}>
+                  <div className="timeline-dot">{n}</div>
+                  <EditableText
+                    isAdmin={isAdmin}
+                    tag="p"
+                    value={content[`timeline_step_${n}`]}
+                    onSave={(v) => saveContent(`timeline_step_${n}`, v)}
+                  />
+                </div>
+              ))}
+            </div>
+            <div className="engagement-note">
+              <EditableText isAdmin={isAdmin} tag="p" multiline value={content.engagement_note} onSave={(v) => saveContent('engagement_note', v)} />
+              <button type="button" className="link-btn" onClick={() => setShowTerms(true)}>
+                Conditions générales de participation
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <section className="section">
           <div className="section-head">
             <EditableText isAdmin={isAdmin} tag="h2" value={content.topics_heading} onSave={(v) => saveContent('topics_heading', v)} />
             <EditableText isAdmin={isAdmin} tag="span" className="hint" value={content.topics_hint} onSave={(v) => saveContent('topics_hint', v)} />
@@ -502,6 +576,15 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
             </form>
           </div>
         </div>
+      )}
+
+      {showTerms && (
+        <TermsModal
+          isAdmin={isAdmin}
+          text={content.cgv_text}
+          onSave={(v) => saveContent('cgv_text', v)}
+          onClose={() => setShowTerms(false)}
+        />
       )}
     </>
   );
