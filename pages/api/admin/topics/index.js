@@ -13,7 +13,7 @@ export default requireAuth(async function handler(req, res) {
   }
 
   if (req.method === 'POST') {
-    const { title, level, desc, fullDescription, program, price, duration } = req.body || {};
+    const { title, level, desc, fullDescription, program, price, duration, category, bonus } = req.body || {};
     if (!title?.trim()) return res.status(400).json({ error: 'Le titre est requis' });
     try {
       const topic = await createTopic({
@@ -24,6 +24,8 @@ export default requireAuth(async function handler(req, res) {
         program: (program || '').trim(),
         price: (price || '').trim(),
         duration: (duration || '').trim(),
+        category: (category || '').trim(),
+        bonus: (bonus || '').trim(),
       });
       return res.status(200).json({ topic });
     } catch (err) {

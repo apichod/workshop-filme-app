@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import Head from 'next/head';
 import { getOpenSessions } from '../lib/sessions';
-import { getVisibleTopics, getAllTopics, CAPACITY, VALIDATION_THRESHOLD, PRICE_LABEL, nextSaturdays, formatSaturday } from '../lib/topics';
+import { getVisibleTopics, getAllTopics, CAPACITY, VALIDATION_THRESHOLD, PRICE_LABEL, TOPIC_CATEGORIES, nextSaturdays, formatSaturday } from '../lib/topics';
 import { getSiteContent, CONTENT_DEFAULTS } from '../lib/content';
 import { getSession } from '../lib/auth';
 import AdminBar from '../components/AdminBar';
@@ -61,6 +61,8 @@ function emptyTopicForm(topic) {
     program: topic?.program || '',
     price: topic?.price || '',
     duration: topic?.duration || '',
+    category: topic?.category || '',
+    bonus: topic?.bonus || '',
   };
 }
 
@@ -141,6 +143,24 @@ function TopicFormModal({ mode, topic, onClose, onSaved }) {
             </div>
           </div>
 
+          <div className="form-group">
+            <label className="form-label">Catégorie</label>
+            <select className="form-input" value={form.category} onChange={(e) => set('category', e.target.value)}>
+              <option value="">— Aucune —</option>
+              {TOPIC_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">Bonus exclusif</label>
+            <input
+              className="form-input"
+              value={form.bonus}
+              onChange={(e) => set('bonus', e.target.value)}
+              placeholder="Ex : Bon d'achat de 150 € HT sur votre 1ère location Ronin 4D chez Filme"
+            />
+          </div>
+
           <div className="modal-actions">
             <button type="button" className="btn btn-ghost" onClick={onClose}>Annuler</button>
             <button type="submit" className="btn btn-primary" disabled={loading}>
@@ -161,10 +181,14 @@ function TopicDetailModal({ topic, onClose, onRegister }) {
     <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className="modal" style={{ maxWidth: 640, maxHeight: '85vh', overflowY: 'auto' }}>
         <button className="modal-close" onClick={onClose}>✕</button>
+        {topic.category && <span className="badge badge-blue" style={{ marginBottom: 8, display: 'inline-block' }}>{topic.category}</span>}
         <h2>{topic.title}</h2>
         <div className="level" style={{ marginTop: 4 }}>
           {[topic.level, topic.price || PRICE_LABEL, topic.duration || '1 journée (9h–18h)'].filter(Boolean).join(' · ')}
         </div>
+        {topic.bonus && (
+          <div className="badge badge-amber" style={{ display: 'inline-block', marginTop: 10 }}>🎁 {topic.bonus}</div>
+        )}
 
         {topic.fullDescription && (
           <p style={{ whiteSpace: 'pre-wrap', fontSize: 14, color: 'var(--text)', lineHeight: 1.7, marginTop: 20 }}>
@@ -224,11 +248,15 @@ function TopicCard({ topic, index, isAdmin, onOpenRegister, onSaved }) {
     <div className="card topic-card" style={{ opacity: topic.archived ? 0.55 : 1 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
         <div className="idx">Formation {String(index + 1).padStart(2, '0')}</div>
-        {topic.archived && <span className="badge badge-gray">Archivée</span>}
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+          {topic.category && <span className="badge badge-blue">{topic.category}</span>}
+          {topic.archived && <span className="badge badge-gray">Archivée</span>}
+        </div>
       </div>
       <h3>{topic.title}</h3>
       <p>{topic.desc}</p>
       <div className="level">{[topic.level, topic.price || PRICE_LABEL, topic.duration || '1 journée (9h–18h)'].filter(Boolean).join(' · ')}</div>
+      {topic.bonus && <div className="badge badge-amber" style={{ display: 'inline-block', marginTop: 4 }}>🎁 {topic.bonus}</div>}
       {error && <div className="form-error">{error}</div>}
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
         {!topic.archived && (

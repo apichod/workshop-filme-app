@@ -40,6 +40,11 @@ façon d'envoyer des emails (`lib/mailer.js`, Gmail SMTP via nodemailer).
   chaque formation : `full_description` (descriptif complet), `program`
   (programme), `price` (prix spécifique, sinon le prix global s'applique),
   `duration` (durée spécifique, sinon "1 journée (9h–18h)").
+- **`supabase_topics_category_bonus_migration.sql`** — ajoute `category` (badge
+  unique parmi Image / Lumière / Machinerie / Audio / Régie vidéo, voir
+  `TOPIC_CATEGORIES` dans `lib/topics.js`) et `bonus` (texte libre "Bonus
+  exclusif", ex: "Bon d'achat de 150 € HT sur votre 1ère location Ronin 4D
+  chez Filme").
 - **Admin (`/admin`)** — connexion par lien magique (comme `monespace.filme.fr`),
   réservée aux emails listés dans `ADMIN_EMAILS`. Bandeau fixe en haut avec un
   champ pour rechercher un client par email (affiche son profil Booqable +
@@ -48,8 +53,9 @@ façon d'envoyer des emails (`lib/mailer.js`, Gmail SMTP via nodemailer).
   affiche le bandeau et devient éditable en place :
   - Chaque formation a un bouton ✏️ Éditer qui ouvre une **popup** avec les champs
     Titre, Résumé (pour la carte homepage), Descriptif complet, Programme, Niveau,
-    Prix, Durée — ainsi qu'Archiver/Désarchiver. Une carte "+ Nouvelle formation"
-    ouvre la même popup en mode création.
+    Prix, Durée, Catégorie (badge unique) et Bonus exclusif — ainsi
+    qu'Archiver/Désarchiver. Une carte "+ Nouvelle formation" ouvre la même
+    popup en mode création.
   - Chaque formation a aussi un lien public **"En savoir plus"** qui ouvre une
     popup (visible par tous les visiteurs) avec le descriptif complet, le
     programme, le niveau, le prix et la durée.
@@ -85,8 +91,10 @@ Variables d'environnement (voir `.env.example`) :
 - `BOOQABLE_COMPANY_SLUG`, `BOOQABLE_API_KEY` — les mêmes que `portail-filme`.
 - `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` — projet Supabase dédié. Coller
   **dans l'ordre** `supabase.sql`, puis `supabase_topics_migration.sql`, puis
-  `supabase_topics_fields_migration.sql`, puis `supabase_content_migration.sql`
-  dans l'éditeur SQL Supabase avant le premier test.
+  `supabase_topics_fields_migration.sql`, puis
+  `supabase_topics_category_bonus_migration.sql`, puis
+  `supabase_content_migration.sql` dans l'éditeur SQL Supabase avant le premier
+  test.
 - `SMTP_USER`, `SMTP_PASS` — mêmes identifiants Gmail que `portail-filme`
   (mot de passe d'application Google, voir `myaccount.google.com/apppasswords`).
 - `ADMIN_EMAILS` — reçoit l'alerte "session validée" ET seul(s) autorisé(s) à
