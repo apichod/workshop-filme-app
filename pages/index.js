@@ -1,18 +1,200 @@
 import { useState } from 'react';
 import Head from 'next/head';
 import { getOpenSessions } from '../lib/sessions';
-import { getVisibleTopics, CAPACITY, PRICE_LABEL, nextSaturdays, formatSaturday } from '../lib/topics';
+import { getVisibleTopics, getAllTopics, CAPACITY, PRICE_LABEL, nextSaturdays, formatSaturday } from '../lib/topics';
+import { getSession } from '../lib/auth';
+import AdminBar from '../components/AdminBar';
 
-export default function Home({ initialSessions, topics }) {
+// ─── Carte formation — mode normal + mode édition admin ──────────────────────
+function TopicCard({ topic, index, isAdmin, onOpenRegister, onSaved }) {
+  const [editing, setEditing] = useState(false);
+  const [form, setForm] = useState({ title: topic.title, level: topic.level, desc: topic.desc });
+  const [loading, setLoading] = useState(false);
+  const [archiving, setArchiving] = useState(false);
+  const [error, setError] = useState('');
+
+  async function save() {
+    setLoading(true);
+    setError('');
+    try {
+      const res = await fetch(`/api/admin/topics/${topic.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Erreur');
+      onSaved(data.topic);
+      setEditing(false);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function toggleArchived() {
+    setArchiving(true);
+    setError('');
+    try {
+      const res = await fetch(`/api/admin/topics/${topic.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ archived: !topic.archived }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Erreur');
+      onSaved(data.topic);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setArchiving(false);
+    }
+  }
+
+  if (editing) {
+    return (
+      <div className="card topic-card">
+        <div className="idx">Formation {String(index + 1).padStart(2, '0')} · édition</div>
+        {error && <div className="form-error">{error}</div>}
+        <div className="form-group">
+          <label className="form-label">Titre</label>
+          <input className="form-input" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
+        </div>
+        <div className="form-group">
+          <label className="form-label">Niveau</label>
+          <input className="form-input" value={form.level || ''} onChange={(e) => setForm({ ...form, level: e.target.value })} />
+        </div>
+        <div className="form-group">
+          <label className="form-label">Description</label>
+          <textarea className="form-input" rows={4} value={form.desc || ''} onChange={(e) => setForm({ ...form, desc: e.target.value })} />
+        </div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button
+            type="button"
+            className="btn btn-ghost btn-sm"
+            onClick={() => { setEditing(false); setForm({ title: topic.title, level: topic.level, desc: topic.desc }); setError(''); }}
+          >
+            Annuler
+          </button>
+          <button type="button" className="btn btn-primary btn-sm" onClick={save} disabled={loading}>
+            {loading ? 'Enregistrement…' : 'Enregistrer'}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="card topic-card" style={{ opacity: topic.archived ? 0.55 : 1 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
+        <div className="idx">Formation {String(index + 1).padStart(2, '0')}</div>
+        {topic.archived && <span className="badge badge-gray">Archivée</span>}
+      </div>
+      <h3>{topic.title}</h3>
+      <p>{topic.desc}</p>
+      <div className="level">{topic.level} · {PRICE_LABEL} · 1 journée (9h–18h)</div>
+      {error && <div className="form-error">{error}</div>}
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        {!topic.archived && (
+          <button className="btn btn-primary btn-sm" onClick={() => onOpenRegister(topic.id)}>
+            Choisir un ou plusieurs samedis
+          </button>
+        )}
+        {isAdmin && (
+          <>
+            <button type="button" className="btn btn-ghost btn-sm" onClick={() => setEditing(true)}>✏️ Éditer</button>
+            <button type="button" className="btn btn-ghost btn-sm" onClick={toggleArchived} disabled={archiving}>
+              {archiving ? '…' : topic.archived ? 'Désarchiver' : 'Archiver'}
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Formulaire de création (admin uniquement) ───────────────────────────────
+function NewTopicCard({ onCreated }) {
+  const [open, setOpen] = useState(false);
+  const [form, setForm] = useState({ title: '', level: '', desc: '' });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  async function submit(e) {
+    e.preventDefault();
+    if (!form.title.trim()) { setError('Le titre est requis.'); return; }
+    setLoading(true);
+    setError('');
+    try {
+      const res = await fetch('/api/admin/topics', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Erreur');
+      onCreated(data.topic);
+      setForm({ title: '', level: '', desc: '' });
+      setOpen(false);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  if (!open) {
+    return (
+      <button type="button" className="card topic-card" style={{ alignItems: 'center', justifyContent: 'center', border: '1px dashed var(--border)', boxShadow: 'none', cursor: 'pointer', minHeight: 160 }} onClick={() => setOpen(true)}>
+        <span style={{ fontWeight: 700, color: 'var(--accent)' }}>+ Nouvelle formation</span>
+      </button>
+    );
+  }
+
+  return (
+    <form onSubmit={submit} className="card topic-card">
+      <div className="idx">Nouvelle formation</div>
+      {error && <div className="form-error">{error}</div>}
+      <div className="form-group">
+        <label className="form-label">Titre</label>
+        <input className="form-input" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="Ex : Drone FPV cinématique" required />
+      </div>
+      <div className="form-group">
+        <label className="form-label">Niveau</label>
+        <input className="form-input" value={form.level} onChange={(e) => setForm({ ...form, level: e.target.value })} placeholder="Ex : Débutant" />
+      </div>
+      <div className="form-group">
+        <label className="form-label">Description</label>
+        <textarea className="form-input" rows={4} value={form.desc} onChange={(e) => setForm({ ...form, desc: e.target.value })} />
+      </div>
+      <div style={{ display: 'flex', gap: 8 }}>
+        <button type="button" className="btn btn-ghost btn-sm" onClick={() => setOpen(false)}>Annuler</button>
+        <button type="submit" className="btn btn-primary btn-sm" disabled={loading}>{loading ? 'Création…' : 'Créer'}</button>
+      </div>
+    </form>
+  );
+}
+
+export default function Home({ initialSessions, initialTopics, isAdmin, admin }) {
   const [sessions, setSessions] = useState(initialSessions);
+  const [topics, setTopics] = useState(initialTopics);
   const [modal, setModal] = useState(null); // { topicId, dates: string[] }
   const [form, setForm] = useState({ name: '', email: '' });
   const [status, setStatus] = useState({ loading: false, error: '', results: [] });
 
   const saturdays = nextSaturdays(8);
+  const selectableTopics = topics.filter((t) => !t.archived);
+
+  function updateTopicInList(updated) {
+    setTopics((list) => list.map((t) => (t.id === updated.id ? updated : t)));
+  }
+  function addTopicToList(created) {
+    setTopics((list) => [...list, created]);
+  }
 
   function openModal(topicId, dateIso) {
-    setModal({ topicId: topicId || topics[0]?.id, dates: dateIso ? [dateIso] : [] });
+    setModal({ topicId: topicId || selectableTopics[0]?.id, dates: dateIso ? [dateIso] : [] });
     setForm({ name: '', email: '' });
     setStatus({ loading: false, error: '', results: [] });
   }
@@ -88,7 +270,9 @@ export default function Home({ initialSessions, topics }) {
         <meta name="description" content="Ateliers pratiques du samedi chez Filme : prise en main du matériel de location, 149 € HT, 6 places maximum." />
       </Head>
 
-      <div className="page">
+      {isAdmin && <AdminBar email={admin.email} />}
+
+      <div className="page" style={isAdmin ? { paddingTop: 56 } : undefined}>
         <header className="hero">
           <img src="https://www.filme.fr/cdn/shop/files/Filme-Logo-sd.svg?v=1707646401&width=140" alt="Filme" className="logo" />
           <h1>Les ateliers du samedi, avec le matériel que vous louez déjà.</h1>
@@ -152,21 +336,18 @@ export default function Home({ initialSessions, topics }) {
         <section className="section">
           <div className="section-head">
             <h2>Les formations</h2>
-            <span className="hint">Choisissez une formation pour proposer ou rejoindre un ou plusieurs samedis</span>
+            <span className="hint">
+              {isAdmin ? 'Mode admin — éditez, archivez ou créez une formation directement ici' : 'Choisissez une formation pour proposer ou rejoindre un ou plusieurs samedis'}
+            </span>
           </div>
-          {topics.length === 0 ? (
+          {topics.length === 0 && !isAdmin ? (
             <div className="card"><div className="empty">Aucune formation disponible pour le moment.</div></div>
           ) : (
             <div className="topics-grid">
               {topics.map((t, i) => (
-                <div className="card topic-card" key={t.id}>
-                  <div className="idx">Formation {String(i + 1).padStart(2, '0')}</div>
-                  <h3>{t.title}</h3>
-                  <p>{t.desc}</p>
-                  <div className="level">{t.level} · {PRICE_LABEL} · 1 journée (9h–18h)</div>
-                  <button className="btn btn-primary btn-sm" onClick={() => openModal(t.id, null)}>Choisir un ou plusieurs samedis</button>
-                </div>
+                <TopicCard key={t.id} topic={t} index={i} isAdmin={isAdmin} onOpenRegister={(id) => openModal(id, null)} onSaved={updateTopicInList} />
               ))}
+              {isAdmin && <NewTopicCard onCreated={addTopicToList} />}
             </div>
           )}
         </section>
@@ -191,7 +372,7 @@ export default function Home({ initialSessions, topics }) {
                   value={modal.topicId}
                   onChange={(e) => setModal({ ...modal, topicId: e.target.value })}
                 >
-                  {topics.map((t) => (
+                  {selectableTopics.map((t) => (
                     <option key={t.id} value={t.id}>{t.title}</option>
                   ))}
                 </select>
@@ -263,12 +444,18 @@ export default function Home({ initialSessions, topics }) {
   );
 }
 
-export async function getServerSideProps() {
+export async function getServerSideProps(ctx) {
+  const session = getSession(ctx.req);
+  const isAdmin = !!session;
+
   try {
-    const [sessions, topics] = await Promise.all([getOpenSessions(), getVisibleTopics()]);
-    return { props: { initialSessions: sessions, topics } };
+    const [sessions, topics] = await Promise.all([
+      getOpenSessions(),
+      isAdmin ? getAllTopics() : getVisibleTopics(),
+    ]);
+    return { props: { initialSessions: sessions, initialTopics: topics, isAdmin, admin: session || null } };
   } catch (err) {
     console.error('[index] getServerSideProps', err);
-    return { props: { initialSessions: [], topics: [] } };
+    return { props: { initialSessions: [], initialTopics: [], isAdmin, admin: session || null } };
   }
 }
