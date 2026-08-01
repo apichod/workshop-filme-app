@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Head from 'next/head';
 import { getOpenSessions } from '../lib/sessions';
 import { getVisibleTopics, getAllTopics, CAPACITY, VALIDATION_THRESHOLD, PRICE_LABEL, TOPIC_CATEGORIES, nextSaturdays, yearSaturdays, formatSaturday } from '../lib/topics';
@@ -440,7 +440,7 @@ function dayLabel(dateIso) {
   return d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' });
 }
 
-function PreferencesModal({ closedDates, onToggle, onClose }) {
+function SaturdaysPreferences({ closedDates, onToggle }) {
   const [pending, setPending] = useState(null); // date en cours d'enregistrement
   const [error, setError] = useState('');
   const year = yearSaturdays(52);
@@ -467,43 +467,142 @@ function PreferencesModal({ closedDates, onToggle, onClose }) {
   }
 
   return (
+    <>
+      <p style={{ color: 'var(--text-muted)', fontSize: 13, marginTop: 8, marginBottom: 16 }}>
+        Décochez un samedi (congés, jour férié, fermeture exceptionnelle…) pour qu'il ne soit plus proposé
+        à l'inscription. Il n'apparaîtra plus dans le formulaire, et une éventuelle tentative d'inscription
+        directe sur cette date sera refusée.
+      </p>
+
+      {error && <div className="form-error">{error}</div>}
+
+      {groups.map((g) => (
+        <div key={g.key} style={{ marginBottom: 16 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', marginBottom: 8 }}>{g.label}</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: 8 }}>
+            {g.dates.map((dateIso) => {
+              const closed = closedSet.has(dateIso);
+              return (
+                <label
+                  key={dateIso}
+                  className="checkbox-item"
+                  style={{ opacity: pending === dateIso ? 0.5 : 1, textDecoration: closed ? 'line-through' : 'none', color: closed ? 'var(--text-muted)' : 'var(--text)' }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={!closed}
+                    disabled={pending === dateIso}
+                    onChange={(e) => toggle(dateIso, !e.target.checked)}
+                  />
+                  {dayLabel(dateIso)}
+                </label>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+    </>
+  );
+}
+
+function RegistrationsPreferences({ onChanged }) {
+  const [sessions, setSessions] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [removingId, setRemovingId] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/api/admin/sessions')
+      .then((r) => r.json())
+      .then((data) => { if (!cancelled) setSessions(data.sessions || []); })
+      .catch(() => { if (!cancelled) setError('Impossible de charger les inscriptions'); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, []);
+
+  async function removeRegistrant(sessionId, registrant) {
+    if (!window.confirm(`Retirer ${registrant.name || registrant.email} de cette session ?`)) return;
+    setRemovingId(registrant.id);
+    setError('');
+    try {
+      const res = await fetch(`/api/admin/registrations/${registrant.id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Erreur');
+      setSessions((list) =>
+        list
+          .map((s) => (s.id === sessionId ? { ...s, registrants: s.registrants.filter((r) => r.id !== registrant.id) } : s))
+          .filter((s) => s.registrants.length > 0)
+      );
+      onChanged?.();
+    } catch (err) {
+      setError(err.message || 'Erreur');
+    } finally {
+      setRemovingId(null);
+    }
+  }
+
+  if (loading) return <div className="loading" style={{ marginTop: 16 }}>Chargement…</div>;
+
+  return (
+    <>
+      <p style={{ color: 'var(--text-muted)', fontSize: 13, marginTop: 8, marginBottom: 16 }}>
+        Retirez manuellement un inscrit (erreur d'inscription, désistement signalé par téléphone…). Si le
+        nombre d'inscrits repasse sous le seuil de validation, la session redevient "non validée".
+      </p>
+
+      {error && <div className="form-error">{error}</div>}
+
+      {(!sessions || sessions.length === 0) && !error ? (
+        <div className="empty">Aucune inscription à venir pour le moment.</div>
+      ) : (
+        sessions.map((s) => (
+          <div key={s.id} style={{ marginBottom: 16 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', marginBottom: 4 }}>
+              {s.topic?.title || s.topicId} — {s.dateLabel}
+              {s.validated && <span className="badge badge-green" style={{ marginLeft: 8 }}>✅ Validée</span>}
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              {s.registrants.map((r) => (
+                <div key={r.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, fontSize: 13, padding: '6px 0', borderBottom: '1px solid var(--border)' }}>
+                  <span>{r.name} <span style={{ color: 'var(--text-muted)' }}>· {r.email}</span></span>
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-sm"
+                    disabled={removingId === r.id}
+                    onClick={() => removeRegistrant(s.id, r)}
+                  >
+                    {removingId === r.id ? '…' : 'Retirer'}
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))
+      )}
+    </>
+  );
+}
+
+function PreferencesModal({ closedDates, onToggle, onSessionsChanged, onClose }) {
+  const [tab, setTab] = useState('samedis');
+
+  return (
     <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className="modal" style={{ maxWidth: 620, maxHeight: '85vh', overflowY: 'auto' }}>
         <button className="modal-close" onClick={onClose}>✕</button>
-        <h2>Préférences — samedis proposés</h2>
-        <p style={{ color: 'var(--text-muted)', fontSize: 13, marginTop: 8, marginBottom: 16 }}>
-          Décochez un samedi (congés, jour férié, fermeture exceptionnelle…) pour qu'il ne soit plus proposé
-          à l'inscription. Il n'apparaîtra plus dans le formulaire, et une éventuelle tentative d'inscription
-          directe sur cette date sera refusée.
-        </p>
+        <h2>Préférences</h2>
 
-        {error && <div className="form-error">{error}</div>}
+        <div style={{ display: 'flex', gap: 8, marginTop: 16, marginBottom: 4 }}>
+          <button type="button" className={`btn btn-sm ${tab === 'samedis' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setTab('samedis')}>Samedis proposés</button>
+          <button type="button" className={`btn btn-sm ${tab === 'inscriptions' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setTab('inscriptions')}>Inscriptions</button>
+        </div>
 
-        {groups.map((g) => (
-          <div key={g.key} style={{ marginBottom: 16 }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', marginBottom: 8 }}>{g.label}</div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: 8 }}>
-              {g.dates.map((dateIso) => {
-                const closed = closedSet.has(dateIso);
-                return (
-                  <label
-                    key={dateIso}
-                    className="checkbox-item"
-                    style={{ opacity: pending === dateIso ? 0.5 : 1, textDecoration: closed ? 'line-through' : 'none', color: closed ? 'var(--text-muted)' : 'var(--text)' }}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={!closed}
-                      disabled={pending === dateIso}
-                      onChange={(e) => toggle(dateIso, !e.target.checked)}
-                    />
-                    {dayLabel(dateIso)}
-                  </label>
-                );
-              })}
-            </div>
-          </div>
-        ))}
+        {tab === 'samedis' ? (
+          <SaturdaysPreferences closedDates={closedDates} onToggle={onToggle} />
+        ) : (
+          <RegistrationsPreferences onChanged={onSessionsChanged} />
+        )}
 
         <div className="modal-actions">
           <button type="button" className="btn btn-primary" onClick={onClose}>Fermer</button>
@@ -941,6 +1040,7 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
         <PreferencesModal
           closedDates={closedDates}
           onToggle={toggleClosedDate}
+          onSessionsChanged={refreshSessions}
           onClose={() => setShowPreferences(false)}
         />
       )}

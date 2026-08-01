@@ -52,13 +52,18 @@ façon d'envoyer des emails (`lib/mailer.js`, Gmail SMTP via nodemailer).
   ci-dessous). Le lien direct vers `/admin/topics` a été retiré du bandeau
   (l'édition des formations se fait désormais via la popup inline sur la
   homepage), mais la page reste accessible directement si besoin.
-- **Préférences — samedis proposés** — popup accessible depuis le bandeau
-  admin, listant un an de samedis à venir groupés par mois. Décocher un
-  samedi (jour férié, congés, fermeture exceptionnelle…) l'exclut du
-  formulaire d'inscription ; `nextSaturdays()` (`lib/topics.js`) saute
-  automatiquement les dates fermées, et `pages/api/register.js` refuse
-  toute tentative d'inscription directe sur une date fermée. Stocké dans
-  `workshop_closed_dates` (`lib/closedDates.js`).
+- **Préférences** — popup accessible depuis le bandeau admin, avec deux onglets :
+  - **Samedis proposés** — un an de samedis à venir groupés par mois. Décocher
+    un samedi (jour férié, congés, fermeture exceptionnelle…) l'exclut du
+    formulaire d'inscription ; `nextSaturdays()` (`lib/topics.js`) saute
+    automatiquement les dates fermées, et `pages/api/register.js` refuse toute
+    tentative d'inscription directe sur une date fermée. Stocké dans
+    `workshop_closed_dates` (`lib/closedDates.js`).
+  - **Inscriptions** — liste les sessions à venir avec leurs inscrits, avec un
+    bouton "Retirer" par inscrit (erreur d'inscription, désistement signalé
+    par téléphone…). Si le nombre d'inscrits repasse sous le seuil de
+    validation, la session redevient automatiquement "non validée"
+    (`pages/api/admin/registrations/[id].js`).
 - **Édition directement sur la homepage** — connecté en admin, `workshop.filme.fr`
   affiche le bandeau et devient éditable en place :
   - Chaque formation a un bouton ✏️ Éditer qui ouvre une **popup** avec les champs
