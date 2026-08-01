@@ -40,7 +40,7 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 a { color: var(--accent); }
-h1, h2, h3, .hero h1, .section-head h2, .topic-card h3 { font-family: var(--font-heading-family); letter-spacing: 0.6px; }
+h1, h2, h3, .section-head h2, .topic-card h3 { font-family: var(--font-heading-family); letter-spacing: 0.6px; }
 
 /* ─── Cards / badges / boutons / forms / modale (repris de portail-filme) ─── */
 
@@ -238,7 +238,7 @@ h1, h2, h3, .hero h1, .section-head h2, .topic-card h3 { font-family: var(--font
 @media screen and (min-width: 750px) {
   .page-crumb { padding: 24px 50px 0; }
 }
-.hero .logo { height: 18px; display: block; margin-bottom: 20px; }
+.brand-crumb .logo { height: 18px; display: block; margin-bottom: 20px; }
 /* Repère "vous êtes toujours chez Filme" — même schéma que le fil d'ariane
    ("Home › Le blog de Filme") utilisé sur www.filme.fr : logo, puis 20px,
    puis fil d'ariane, puis 20px (porté par sa margin-bottom), puis le hero
@@ -289,19 +289,24 @@ h1, h2, h3, .hero h1, .section-head h2, .topic-card h3 { font-family: var(--font
 @media screen and (min-width: 750px) {
   .hero-banner-inner { padding: 70px 50px; }
 }
-.hero-copy { max-width: 620px; }
+/* max-width: 100% ici (pas de limite basse) pour que la ligne de stats en
+   dessous puisse s'étaler sur toute la largeur du bandeau et rester en ligne
+   — seuls le titre et le texte gardent une largeur de lecture confortable. */
+.hero-copy { max-width: 100%; }
 .hero-banner h1 {
   font-size: clamp(24px, 3.6vw, 34px);
   font-weight: 400;
   color: #fff;
+  max-width: 620px;
   margin-bottom: 14px;
 }
 .hero-banner p.lead {
   color: rgba(255, 255, 255, 0.75);
   font-size: 16px;
+  max-width: 560px;
   margin-bottom: 28px;
 }
-.hero-stats { display: flex; flex-wrap: wrap; gap: 26px; }
+.hero-stats { display: flex; flex-wrap: wrap; gap: 20px 28px; }
 .stat-item { display: flex; align-items: center; gap: 10px; }
 .stat-item .icon-wrap { color: #e8ab5c; }
 .stat-item strong { display: block; font-size: 14px; font-weight: 600; color: #fff; }
@@ -322,7 +327,9 @@ h1, h2, h3, .hero h1, .section-head h2, .topic-card h3 { font-family: var(--font
   margin-bottom: 18px; flex-wrap: wrap; gap: 8px;
 }
 /* h2 desktop du thème Dawn : calc(--font-heading-scale * 2.2rem) = 22px */
-.section-head h2 { font-size: 22px; font-weight: 400; display: inline-flex; align-items: center; gap: 12px; }
+/* display:flex (pas inline-flex) pour que h2 reste un bloc — sinon le .hint
+   qui suit en sibling se retrouve sur la même ligne au lieu de passer dessous. */
+.section-head h2 { font-size: 22px; font-weight: 400; display: flex; align-items: center; gap: 12px; }
 .section-head h2::after { content: ''; display: inline-block; width: 22px; height: 2px; background: var(--text-muted); opacity: 0.5; }
 .section-head .hint { color: var(--text-muted); font-size: 14px; }
 
@@ -349,7 +356,6 @@ h1, h2, h3, .hero h1, .section-head h2, .topic-card h3 { font-family: var(--font
   border-radius: 999px;
   overflow: hidden;
   border: 1px solid var(--border);
-  flex: 1;
 }
 .bar-fill {
   position: absolute; inset: 0 auto 0 0;
@@ -359,8 +365,8 @@ h1, h2, h3, .hero h1, .section-head h2, .topic-card h3 { font-family: var(--font
   transition: width .4s ease;
 }
 .bar-fill.full { background: linear-gradient(90deg, #00915d, var(--green)); }
-/* Barre + compteur côte à côte, comme sur le mockup (pas empilés) */
-.bar-col { display: flex; flex-direction: row; align-items: center; gap: 14px; }
+/* Compteur sous la barre de progression (pas à côté) */
+.bar-col { display: flex; flex-direction: column; gap: 6px; }
 .bar-count { font-size: 13px; color: var(--text-muted); white-space: nowrap; }
 
 .chart-row .action { display: flex; align-items: center; justify-content: flex-end; gap: 12px; }
