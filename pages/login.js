@@ -96,7 +96,7 @@ export default function Login() {
 
 export async function getServerSideProps(ctx) {
   const session = getSession(ctx.req);
-  if (session?.isAdmin) return { redirect: { destination: '/admin', permanent: false } };
+  if (session?.isAdmin) return { redirect: { destination: '/', permanent: false } };
   if (session) return { redirect: { destination: '/mes-inscriptions', permanent: false } };
   return { props: {} };
 }

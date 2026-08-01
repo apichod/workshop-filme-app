@@ -9,5 +9,5 @@ export default function handler(req, res) {
   }
 
   setSessionCookie(res, { email: payload.email, name: payload.name || '', isAdmin: !!payload.isAdmin });
-  return res.redirect(302, payload.isAdmin ? '/admin' : '/mes-inscriptions');
+  return res.redirect(302, payload.isAdmin ? '/' : '/mes-inscriptions');
 }
