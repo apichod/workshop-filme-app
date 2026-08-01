@@ -242,7 +242,7 @@ function TopicDetailModal({ topic, onClose, onRegister }) {
         )}
 
         {topic.fullDescription && (
-          <p style={{ whiteSpace: 'pre-wrap', fontSize: 14, color: 'var(--text)', lineHeight: 1.7, marginTop: 20 }}>
+          <p style={{ whiteSpace: 'pre-wrap', fontSize: 15, color: 'var(--text)', lineHeight: 1.7, marginTop: 20 }}>
             {topic.fullDescription}
           </p>
         )}
@@ -849,21 +849,21 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
       {isAdmin && <AdminBar onOpenPreferences={() => setShowPreferences(true)} />}
       <UserBar session={session} offset={isAdmin} />
 
-      <div className="page" style={isAdmin ? { paddingTop: 56 } : undefined}>
-        <header className="hero">
-          <div className="brand-crumb">
-            <a href="https://www.filme.fr" title="Retour à filme.fr">
-              <img src="https://www.filme.fr/cdn/shop/files/Filme-Logo-sd.svg?v=1707646401&width=120" alt="Filme" className="logo" />
-            </a>
-            <nav className="breadcrumb"><a href="https://www.filme.fr">Home</a> {'>'} Workshops</nav>
-          </div>
-        </header>
+      <div className="page-crumb" style={isAdmin ? { paddingTop: 56 } : undefined}>
+        <div className="brand-crumb">
+          <a href="https://www.filme.fr" title="Retour à filme.fr">
+            <img src="https://www.filme.fr/cdn/shop/files/Filme-Logo-sd.svg?v=1707646401&width=120" alt="Filme" className="logo" />
+          </a>
+          <nav className="breadcrumb"><a href="https://www.filme.fr">Home</a> {'>'} Workshops</nav>
+        </div>
       </div>
 
       <section className="hero-banner">
+        <div className="hero-bg">
+          <ImgPlaceholder iconSize={40} />
+        </div>
         <div className="hero-banner-inner">
           <div className="hero-copy">
-            <EditableText isAdmin={isAdmin} tag="span" className="hero-badge" value={content.hero_badge} onSave={(v) => saveContent('hero_badge', v)} />
             <EditableText isAdmin={isAdmin} tag="h1" value={content.hero_title} onSave={(v) => saveContent('hero_title', v)} />
             <EditableText isAdmin={isAdmin} tag="p" className="lead" multiline value={content.hero_lead} onSave={(v) => saveContent('hero_lead', v)} />
             <div className="hero-stats">
@@ -884,9 +884,6 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
                 <EditableText isAdmin={isAdmin} tag="strong" value={content.pill_audience} onSave={(v) => saveContent('pill_audience', v)} />
               </div>
             </div>
-          </div>
-          <div className="hero-photo">
-            <ImgPlaceholder iconSize={40} />
           </div>
         </div>
       </section>

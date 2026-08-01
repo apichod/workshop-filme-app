@@ -34,7 +34,7 @@ body {
   font-family: var(--font-body-family);
   background: var(--bg);
   color: var(--text);
-  font-size: 14px;
+  font-size: 16px;
   line-height: 1.5;
   letter-spacing: 0.4px;
   -webkit-font-smoothing: antialiased;
@@ -231,7 +231,13 @@ h1, h2, h3, .hero h1, .section-head h2, .topic-card h3 { font-family: var(--font
   .page { padding: 0 50px 80px; }
 }
 
-.hero { padding: 24px 0 0; }
+/* Conteneur dédié au logo/fil d'ariane — distinct de .page pour ne pas hériter
+   de son padding-bottom (60-80px), qui créait un espace bien trop grand avant
+   le hero sombre. */
+.page-crumb { max-width: 1200px; margin: 0 auto; padding: 24px 15px 0; }
+@media screen and (min-width: 750px) {
+  .page-crumb { padding: 24px 50px 0; }
+}
 .hero .logo { height: 18px; display: block; margin-bottom: 20px; }
 /* Repère "vous êtes toujours chez Filme" — même schéma que le fil d'ariane
    ("Home › Le blog de Filme") utilisé sur www.filme.fr : logo, puis 20px,
@@ -252,51 +258,47 @@ h1, h2, h3, .hero h1, .section-head h2, .topic-card h3 { font-family: var(--font
 /* ─── Hero sombre (bandeau plein écran, sous le fil d'ariane) ───────────────── */
 
 .hero-banner {
+  position: relative;
   width: 100vw;
   margin-left: calc(50% - 50vw);
   margin-right: calc(50% - 50vw);
-  background: linear-gradient(120deg, #0d0d0d 55%, #161616 100%);
   color: #fff;
   margin-bottom: 40px;
   overflow: hidden;
-}
-.hero-banner-inner {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 40px 15px;
+  min-height: 380px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 36px;
-  flex-wrap: wrap;
+}
+/* Photo en fond, sur toute la largeur du bandeau, texte posé par-dessus */
+.hero-bg { position: absolute; inset: 0; }
+.hero-bg .img-placeholder { width: 100%; height: 100%; border-radius: 0; background: linear-gradient(135deg, #2a2a2a, #141414); color: #444; }
+.hero-bg::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg, rgba(8, 8, 8, 0.92) 30%, rgba(8, 8, 8, 0.65) 65%, rgba(8, 8, 8, 0.4) 100%);
+}
+.hero-banner-inner {
+  position: relative;
+  z-index: 1;
+  max-width: 1200px;
+  margin: 0 auto;
+  width: 100%;
+  padding: 48px 15px;
 }
 @media screen and (min-width: 750px) {
-  .hero-banner-inner { padding: 60px 50px; flex-wrap: nowrap; }
+  .hero-banner-inner { padding: 70px 50px; }
 }
-.hero-copy { flex: 1 1 420px; min-width: 280px; }
-.hero-badge {
-  display: inline-block;
-  border: 1px solid rgba(255, 255, 255, 0.35);
-  color: #e8ab5c;
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  padding: 5px 14px;
-  border-radius: 999px;
-  margin-bottom: 18px;
-}
+.hero-copy { max-width: 620px; }
 .hero-banner h1 {
   font-size: clamp(24px, 3.6vw, 34px);
   font-weight: 400;
   color: #fff;
-  max-width: 560px;
   margin-bottom: 14px;
 }
 .hero-banner p.lead {
-  color: rgba(255, 255, 255, 0.7);
-  font-size: 14px;
-  max-width: 480px;
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 16px;
   margin-bottom: 28px;
 }
 .hero-stats { display: flex; flex-wrap: wrap; gap: 26px; }
@@ -304,11 +306,6 @@ h1, h2, h3, .hero h1, .section-head h2, .topic-card h3 { font-family: var(--font
 .stat-item .icon-wrap { color: #e8ab5c; }
 .stat-item strong { display: block; font-size: 14px; font-weight: 600; color: #fff; }
 .stat-item span { display: block; font-size: 12.5px; color: rgba(255, 255, 255, 0.55); }
-.hero-photo { flex: 0 0 420px; max-width: 420px; align-self: stretch; }
-.hero-photo .img-placeholder { width: 100%; height: 100%; min-height: 260px; border-radius: 10px; background: linear-gradient(135deg, #2a2a2a, #131313); color: #555; }
-@media screen and (max-width: 749px) {
-  .hero-photo { display: none; }
-}
 
 .img-placeholder {
   background: linear-gradient(135deg, #e6e6e6, #d2d2d2);
@@ -333,38 +330,40 @@ h1, h2, h3, .hero h1, .section-head h2, .topic-card h3 { font-family: var(--font
 
 .chart-row {
   display: grid;
-  grid-template-columns: 240px 1fr 220px;
-  gap: 18px;
+  grid-template-columns: 280px 1fr auto;
+  gap: 20px;
   align-items: center;
-  padding: 16px 20px;
+  padding: 14px 20px;
   border-bottom: 1px solid var(--border);
 }
 .chart-row:last-child { border-bottom: none; }
 .chart-row .meta { display: flex; align-items: center; gap: 14px; }
-.session-thumb { width: 56px; height: 56px; border-radius: 8px; flex-shrink: 0; }
-.chart-row .meta .topic-title { font-weight: 700; font-size: 14px; }
-.chart-row .meta .date-label { display: flex; align-items: center; gap: 5px; color: var(--text-muted); font-size: 12.5px; margin-top: 2px; }
+.session-thumb { width: 64px; height: 64px; border-radius: 8px; flex-shrink: 0; }
+.chart-row .meta .topic-title { font-weight: 700; font-size: 15px; }
+.chart-row .meta .date-label { display: flex; align-items: center; gap: 5px; color: var(--text-muted); font-size: 13px; margin-top: 2px; }
 
 .bar-track {
   position: relative;
-  height: 24px;
+  height: 10px;
   background: var(--bg);
-  border-radius: 6px;
+  border-radius: 999px;
   overflow: hidden;
   border: 1px solid var(--border);
+  flex: 1;
 }
 .bar-fill {
   position: absolute; inset: 0 auto 0 0;
   height: 100%;
-  border-radius: 6px;
+  border-radius: 999px;
   background: linear-gradient(90deg, var(--primary), var(--accent));
   transition: width .4s ease;
 }
 .bar-fill.full { background: linear-gradient(90deg, #00915d, var(--green)); }
-.bar-col { display: flex; flex-direction: column; gap: 6px; }
-.bar-count { font-size: 12px; color: var(--text-muted); }
+/* Barre + compteur côte à côte, comme sur le mockup (pas empilés) */
+.bar-col { display: flex; flex-direction: row; align-items: center; gap: 14px; }
+.bar-count { font-size: 13px; color: var(--text-muted); white-space: nowrap; }
 
-.chart-row .action { display: flex; align-items: center; justify-content: flex-end; gap: 10px; }
+.chart-row .action { display: flex; align-items: center; justify-content: flex-end; gap: 12px; }
 
 @media (max-width: 720px) {
   .chart-row { grid-template-columns: 1fr; gap: 10px; }
@@ -408,7 +407,7 @@ h1, h2, h3, .hero h1, .section-head h2, .topic-card h3 { font-family: var(--font
 .topic-card .idx { font-size: 11px; color: var(--accent); font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
 /* h3 desktop du thème Dawn : calc(--font-heading-scale * 1.8rem) = 18px */
 .topic-card h3 { font-size: 18px; font-weight: 700; line-height: 1.3; }
-.topic-card p { color: var(--text-muted); font-size: 14px; flex: 1; }
+.topic-card p { color: var(--text-muted); font-size: 15px; flex: 1; }
 .topic-card .level { font-size: 12px; color: var(--text-muted); border-top: 1px solid var(--border); padding-top: 10px; }
 .topic-card .btn { align-self: flex-start; }
 
