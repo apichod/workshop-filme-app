@@ -830,30 +830,30 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
         </header>
 
         <section className="section">
-          <div className="section-head" style={{ alignItems: 'flex-start', justifyContent: 'space-between' }}>
+          <div className="section-head">
             <div>
               <EditableText isAdmin={isAdmin} tag="h2" value={content.sessions_heading} onSave={(v) => saveContent('sessions_heading', v)} />
               <EditableText isAdmin={isAdmin} tag="span" className="hint" value={content.sessions_hint} onSave={(v) => saveContent('sessions_hint', v)} />
             </div>
-            {sessions.length > 0 && (
-              <div className="category-filter">
-                <button
-                  type="button"
-                  className={`filter-pill ${sessionSort === 'rate' ? 'active' : ''}`}
-                  onClick={() => setSessionSort('rate')}
-                >
-                  Taux de remplissage
-                </button>
-                <button
-                  type="button"
-                  className={`filter-pill ${sessionSort === 'date' ? 'active' : ''}`}
-                  onClick={() => setSessionSort('date')}
-                >
-                  Date
-                </button>
-              </div>
-            )}
           </div>
+          {sessions.length > 0 && (
+            <div className="category-filter">
+              <button
+                type="button"
+                className={`filter-pill ${sessionSort === 'rate' ? 'active' : ''}`}
+                onClick={() => setSessionSort('rate')}
+              >
+                Taux de remplissage
+              </button>
+              <button
+                type="button"
+                className={`filter-pill ${sessionSort === 'date' ? 'active' : ''}`}
+                onClick={() => setSessionSort('date')}
+              >
+                Date
+              </button>
+            </div>
+          )}
           <div className="card">
             {sessions.length === 0 ? (
               <div className="empty">
@@ -944,14 +944,11 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
                 Toutes
               </button>
               {usedCategories.map((c) => {
-                const isActive = categoryFilter === c;
-                const { color } = categoryStyle(c);
                 return (
                   <button
                     key={c}
                     type="button"
-                    className={`filter-pill ${isActive ? 'active' : ''}`}
-                    style={isActive ? { background: color, borderColor: color } : undefined}
+                    className={`filter-pill ${categoryFilter === c ? 'active' : ''}`}
                     onClick={() => setCategoryFilter(c)}
                   >
                     {c}

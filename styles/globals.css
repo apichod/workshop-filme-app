@@ -271,20 +271,24 @@ a { color: var(--accent); }
 
 /* ─── Filtre par catégorie ─────────────────────────────────────────────────── */
 
+/* Style de bouton repris de cvp.com/events (filtres "Location:") : coins
+   légèrement arrondis (pas des pilules), fond blanc + bordure fine à l'état
+   inactif, noir plein à l'état actif. */
 .category-filter { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
 .filter-pill {
-  background: var(--surface);
+  background: transparent;
   border: 1px solid var(--border);
-  color: var(--text-muted);
+  color: var(--text);
   font-size: 13px;
-  font-weight: 600;
-  padding: 6px 14px;
-  border-radius: 100px;
+  font-weight: 500;
+  padding: 6px 12px;
+  border-radius: 8px;
   cursor: pointer;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
   transition: background 0.15s, color 0.15s, border-color 0.15s;
 }
-.filter-pill:hover { border-color: var(--accent); color: var(--text); }
-.filter-pill.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+.filter-pill:hover { border-color: var(--text); }
+.filter-pill.active { background: var(--text); border-color: var(--text); color: #fff; }
 
 /* ─── Grille des formations ────────────────────────────────────────────────── */
 
