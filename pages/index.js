@@ -8,6 +8,39 @@ import { getSession } from '../lib/auth';
 import AdminBar from '../components/AdminBar';
 import UserBar from '../components/UserBar';
 
+// ─── Petites icônes ligne (SVG maison, pas de dépendance) ────────────────────
+const ICON_PATHS = {
+  price: 'M12 2v20M17 5.5C17 4 15 3 12 3s-5 1.2-5 3.2c0 4 10 2 10 6.3 0 2-2 3.5-5 3.5s-5.5-1.2-5.5-3',
+  users: 'M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7ZM2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6M17 8a3 3 0 1 0 0-6M21.5 20c0-3-2-5.2-5-5.8',
+  check: 'M8 12.5l2.6 2.6L16.5 9M12 3l2.3 1.6 2.8-.3 1 2.6 2.6 1-.3 2.8L21 12l-1.6 2.3.3 2.8-2.6 1-1 2.6-2.8-.3L12 21l-2.3-1.6-2.8.3-1-2.6-2.6-1 .3-2.8L3 12l1.6-2.3-.3-2.8 2.6-1 1-2.6 2.8.3Z',
+  shield: 'M12 3l7 3v5.5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3ZM9 12l2 2 4-4.5',
+  calendar: 'M4 5.5A1.5 1.5 0 0 1 5.5 4h13A1.5 1.5 0 0 1 20 5.5v13A1.5 1.5 0 0 1 18.5 20h-13A1.5 1.5 0 0 1 4 18.5v-13ZM4 9.5h16M8 3v3M16 3v3',
+  bell: 'M6 10a6 6 0 1 1 12 0c0 3.4 1 5.2 1.6 6H4.4C5 15.2 6 13.4 6 10ZM9.7 19a2.3 2.3 0 0 0 4.6 0',
+  mail: 'M4 6.5A1.5 1.5 0 0 1 5.5 5h13A1.5 1.5 0 0 1 20 6.5v11A1.5 1.5 0 0 1 18.5 19h-13A1.5 1.5 0 0 1 4 17.5v-11ZM4.5 6.5 12 12.5l7.5-6',
+  cap: 'M12 4 3 8.5 12 13l9-4.5L12 4ZM6.5 10.7v4.3c0 1.6 2.5 3 5.5 3s5.5-1.4 5.5-3v-4.3M19.5 9v6',
+  info: 'M12 8.2h.01M11.3 11h1v5h1M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Z',
+  arrowRight: 'M4 12h15.2M13.5 6l6 6-6 6',
+  camera: 'M4 8.5A1.5 1.5 0 0 1 5.5 7h2l1-2h7l1 2h2A1.5 1.5 0 0 1 20 8.5v9A1.5 1.5 0 0 1 18.5 19h-13A1.5 1.5 0 0 1 4 17.5v-9Z M12 16.2a3.7 3.7 0 1 0 0-7.4 3.7 3.7 0 0 0 0 7.4Z',
+};
+function Icon({ name, size = 20, style, ...props }) {
+  const d = ICON_PATHS[name];
+  if (!d) return null;
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, ...style }} {...props}>
+      <path d={d} />
+    </svg>
+  );
+}
+
+// ─── Vignette placeholder (tant qu'aucune vraie photo n'est fournie) ─────────
+function ImgPlaceholder({ className, iconSize = 22 }) {
+  return (
+    <div className={`img-placeholder ${className || ''}`}>
+      <Icon name="camera" size={iconSize} />
+    </div>
+  );
+}
+
 // ─── Couleurs par catégorie — badges + filtres (repérage visuel rapide) ──────
 const CATEGORY_STYLES = {
   Image: { badgeClass: 'badge-cat-image', color: '#2B80FF' },
@@ -227,7 +260,7 @@ function TopicDetailModal({ topic, onClose, onRegister }) {
           <button type="button" className="btn btn-ghost" onClick={onClose}>Fermer</button>
           {!topic.archived && (
             <button type="button" className="btn btn-primary" onClick={() => { onRegister(topic.id); onClose(); }}>
-              S'inscrire
+              Indiquer ses disponibilités
             </button>
           )}
         </div>
@@ -279,7 +312,7 @@ function TopicCard({ topic, index, isAdmin, onOpenRegister, onSaved }) {
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
         {!topic.archived && (
           <button className="btn btn-primary btn-sm" onClick={() => onOpenRegister(topic.id)}>
-            S'inscrire
+            Indiquer ses disponibilités
           </button>
         )}
         <button type="button" className="link-btn" onClick={() => setShowDetail(true)}>En savoir plus</button>
@@ -824,16 +857,41 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
             </a>
             <nav className="breadcrumb"><a href="https://www.filme.fr">Home</a> {'>'} Workshops</nav>
           </div>
-          <EditableText isAdmin={isAdmin} tag="h1" value={content.hero_title} onSave={(v) => saveContent('hero_title', v)} />
-          <EditableText isAdmin={isAdmin} tag="p" className="lead" multiline value={content.hero_lead} onSave={(v) => saveContent('hero_lead', v)} />
-          <div className="pill-row">
-            <EditableText isAdmin={isAdmin} tag="span" className="pill" value={content.price_label} onSave={(v) => saveContent('price_label', v)} />
-            <EditableText isAdmin={isAdmin} tag="span" className="pill" value={content.pill_capacity} onSave={(v) => saveContent('pill_capacity', v)} />
-            <EditableText isAdmin={isAdmin} tag="span" className="pill" value={content.pill_audience} onSave={(v) => saveContent('pill_audience', v)} />
-            <EditableText isAdmin={isAdmin} tag="span" className="pill" value={content.pill_validation} onSave={(v) => saveContent('pill_validation', v)} />
-          </div>
         </header>
+      </div>
 
+      <section className="hero-banner">
+        <div className="hero-banner-inner">
+          <div className="hero-copy">
+            <EditableText isAdmin={isAdmin} tag="span" className="hero-badge" value={content.hero_badge} onSave={(v) => saveContent('hero_badge', v)} />
+            <EditableText isAdmin={isAdmin} tag="h1" value={content.hero_title} onSave={(v) => saveContent('hero_title', v)} />
+            <EditableText isAdmin={isAdmin} tag="p" className="lead" multiline value={content.hero_lead} onSave={(v) => saveContent('hero_lead', v)} />
+            <div className="hero-stats">
+              <div className="stat-item">
+                <span className="icon-wrap"><Icon name="price" /></span>
+                <EditableText isAdmin={isAdmin} tag="strong" value={content.price_label} onSave={(v) => saveContent('price_label', v)} />
+              </div>
+              <div className="stat-item">
+                <span className="icon-wrap"><Icon name="users" /></span>
+                <EditableText isAdmin={isAdmin} tag="strong" value={content.pill_capacity} onSave={(v) => saveContent('pill_capacity', v)} />
+              </div>
+              <div className="stat-item">
+                <span className="icon-wrap"><Icon name="check" /></span>
+                <EditableText isAdmin={isAdmin} tag="strong" value={content.pill_validation} onSave={(v) => saveContent('pill_validation', v)} />
+              </div>
+              <div className="stat-item">
+                <span className="icon-wrap"><Icon name="shield" /></span>
+                <EditableText isAdmin={isAdmin} tag="strong" value={content.pill_audience} onSave={(v) => saveContent('pill_audience', v)} />
+              </div>
+            </div>
+          </div>
+          <div className="hero-photo">
+            <ImgPlaceholder iconSize={40} />
+          </div>
+        </div>
+      </section>
+
+      <div className="page">
         <section className="section">
           <div className="section-head">
             <div>
@@ -872,13 +930,20 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
                 // validation atteint.
                 const pct = Math.min(100, Math.round((s.count / s.capacity) * 100));
                 const isFull = s.count >= s.capacity;
-                const badge = <span className="badge badge-gray">{Math.max(0, s.capacity - s.count)} places dispo</span>;
+                const badge = (
+                  <span className={`badge ${s.validated ? 'badge-green' : 'badge-blue'}`}>
+                    {Math.max(0, s.capacity - s.count)} places dispo
+                  </span>
+                );
 
                 return (
                   <div className="chart-row" key={s.id}>
                     <div className="meta">
-                      <div className="topic-title">{s.topic.title}</div>
-                      <div className="date-label">{s.dateLabel}</div>
+                      <ImgPlaceholder className="session-thumb" iconSize={18} />
+                      <div className="meta-text">
+                        <div className="topic-title">{s.topic.title}</div>
+                        <div className="date-label"><Icon name="calendar" size={13} /> {s.dateLabel}</div>
+                      </div>
                     </div>
                     <div className="bar-col">
                       <div className="bar-track">
@@ -889,11 +954,11 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
                     <div className="action">
                       {badge}
                       <button
-                        className="btn btn-ghost btn-sm"
+                        className="btn btn-primary btn-sm"
                         disabled={isFull}
                         onClick={() => openModal(s.topicId, s.dateIso)}
                       >
-                        {isFull ? 'Complet' : "S'inscrire"}
+                        {isFull ? 'Complet' : <>S'inscrire <Icon name="arrowRight" size={14} /></>}
                       </button>
                     </div>
                   </div>
@@ -906,9 +971,12 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
         <section className="section">
           <div className="card" style={{ padding: '28px 24px' }}>
             <div className="timeline">
-              {[1, 2, 3, 4].map((n) => (
+              {[1, 2, 3, 4].map((n, i) => (
                 <div className="timeline-step" key={n}>
                   <div className="timeline-dot">{n}</div>
+                  <div className="timeline-icon">
+                    <Icon name={['cap', 'calendar', 'bell', 'mail'][i]} size={22} />
+                  </div>
                   <EditableText
                     isAdmin={isAdmin}
                     tag="p"
@@ -919,9 +987,12 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
               ))}
             </div>
             <div className="engagement-note">
-              <EditableText isAdmin={isAdmin} tag="p" multiline value={content.engagement_note} onSave={(v) => saveContent('engagement_note', v)} />
+              <div className="en-text">
+                <span className="en-icon"><Icon name="info" size={18} /></span>
+                <EditableText isAdmin={isAdmin} tag="p" multiline value={content.engagement_note} onSave={(v) => saveContent('engagement_note', v)} />
+              </div>
               <button type="button" className="link-btn" onClick={() => setShowTerms(true)}>
-                Conditions générales de participation
+                Conditions générales de participation <Icon name="arrowRight" size={14} />
               </button>
             </div>
           </div>
@@ -976,6 +1047,30 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
             </div>
           )}
         </section>
+
+        <div className="feature-strip">
+          <div className="feature-item">
+            <span className="icon-circle"><Icon name="users" size={18} /></span>
+            <div>
+              <EditableText isAdmin={isAdmin} tag="strong" value={content.feature_1_title} onSave={(v) => saveContent('feature_1_title', v)} />
+              <EditableText isAdmin={isAdmin} tag="p" value={content.feature_1_desc} onSave={(v) => saveContent('feature_1_desc', v)} />
+            </div>
+          </div>
+          <div className="feature-item">
+            <span className="icon-circle"><Icon name="check" size={18} /></span>
+            <div>
+              <EditableText isAdmin={isAdmin} tag="strong" value={content.feature_2_title} onSave={(v) => saveContent('feature_2_title', v)} />
+              <EditableText isAdmin={isAdmin} tag="p" value={content.feature_2_desc} onSave={(v) => saveContent('feature_2_desc', v)} />
+            </div>
+          </div>
+          <div className="feature-item">
+            <span className="icon-circle"><Icon name="shield" size={18} /></span>
+            <div>
+              <EditableText isAdmin={isAdmin} tag="strong" value={content.feature_3_title} onSave={(v) => saveContent('feature_3_title', v)} />
+              <EditableText isAdmin={isAdmin} tag="p" value={content.feature_3_desc} onSave={(v) => saveContent('feature_3_desc', v)} />
+            </div>
+          </div>
+        </div>
 
         <footer className="page-footer">
           <EditableText isAdmin={isAdmin} tag="span" value={content.footer_text} onSave={(v) => saveContent('footer_text', v)} />

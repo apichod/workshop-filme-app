@@ -231,15 +231,12 @@ h1, h2, h3, .hero h1, .section-head h2, .topic-card h3 { font-family: var(--font
   .page { padding: 0 50px 80px; }
 }
 
-.hero {
-  padding: 24px 0 36px;
-  border-bottom: 1px solid var(--border);
-  margin-bottom: 40px;
-}
+.hero { padding: 24px 0 0; }
 .hero .logo { height: 18px; display: block; margin-bottom: 20px; }
 /* Repère "vous êtes toujours chez Filme" — même schéma que le fil d'ariane
    ("Home › Le blog de Filme") utilisé sur www.filme.fr : logo, puis 20px,
-   puis fil d'ariane, puis 20px, puis titre de page. */
+   puis fil d'ariane, puis 20px (porté par sa margin-bottom), puis le hero
+   sombre qui suit immédiatement. */
 .brand-crumb { margin-bottom: 0; }
 .breadcrumb {
   display: block;
@@ -251,26 +248,76 @@ h1, h2, h3, .hero h1, .section-head h2, .topic-card h3 { font-family: var(--font
 }
 .breadcrumb a { color: #5F5F5F; text-decoration: none; }
 .breadcrumb a:hover { color: var(--text); text-decoration: underline; }
-.hero h1 {
-  /* même taille que h1 sur www.filme.fr (mesurée : 30px, weight 400) */
-  font-size: clamp(22px, 3vw, 30px);
-  font-weight: 400;
-  color: var(--text);
-  max-width: 720px;
-  margin-bottom: 12px;
+
+/* ─── Hero sombre (bandeau plein écran, sous le fil d'ariane) ───────────────── */
+
+.hero-banner {
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  margin-right: calc(50% - 50vw);
+  background: linear-gradient(120deg, #0d0d0d 55%, #161616 100%);
+  color: #fff;
+  margin-bottom: 40px;
+  overflow: hidden;
 }
-.hero p.lead { color: var(--text-muted); font-size: 14px; max-width: 600px; margin-bottom: 22px; }
-.pill-row { display: flex; gap: 10px; flex-wrap: wrap; }
-.pill {
-  background: var(--bg);
-  border: 1px solid var(--border);
-  padding: 7px 14px;
-  border-radius: 100px;
-  font-size: 13px;
+.hero-banner-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 40px 15px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 36px;
+  flex-wrap: wrap;
+}
+@media screen and (min-width: 750px) {
+  .hero-banner-inner { padding: 60px 50px; flex-wrap: nowrap; }
+}
+.hero-copy { flex: 1 1 420px; min-width: 280px; }
+.hero-badge {
+  display: inline-block;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  color: #e8ab5c;
+  font-size: 12px;
   font-weight: 600;
-  color: var(--text);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  padding: 5px 14px;
+  border-radius: 999px;
+  margin-bottom: 18px;
 }
-.pill.price { background: var(--accent); color: #fff; border-color: var(--accent); }
+.hero-banner h1 {
+  font-size: clamp(24px, 3.6vw, 34px);
+  font-weight: 400;
+  color: #fff;
+  max-width: 560px;
+  margin-bottom: 14px;
+}
+.hero-banner p.lead {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 14px;
+  max-width: 480px;
+  margin-bottom: 28px;
+}
+.hero-stats { display: flex; flex-wrap: wrap; gap: 26px; }
+.stat-item { display: flex; align-items: center; gap: 10px; }
+.stat-item .icon-wrap { color: #e8ab5c; }
+.stat-item strong { display: block; font-size: 14px; font-weight: 600; color: #fff; }
+.stat-item span { display: block; font-size: 12.5px; color: rgba(255, 255, 255, 0.55); }
+.hero-photo { flex: 0 0 420px; max-width: 420px; align-self: stretch; }
+.hero-photo .img-placeholder { width: 100%; height: 100%; min-height: 260px; border-radius: 10px; background: linear-gradient(135deg, #2a2a2a, #131313); color: #555; }
+@media screen and (max-width: 749px) {
+  .hero-photo { display: none; }
+}
+
+.img-placeholder {
+  background: linear-gradient(135deg, #e6e6e6, #d2d2d2);
+  color: #9a9a9a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius);
+}
 
 .section { margin-bottom: 48px; }
 .section-head {
@@ -278,22 +325,25 @@ h1, h2, h3, .hero h1, .section-head h2, .topic-card h3 { font-family: var(--font
   margin-bottom: 18px; flex-wrap: wrap; gap: 8px;
 }
 /* h2 desktop du thème Dawn : calc(--font-heading-scale * 2.2rem) = 22px */
-.section-head h2 { font-size: 22px; font-weight: 400; }
+.section-head h2 { font-size: 22px; font-weight: 400; display: inline-flex; align-items: center; gap: 12px; }
+.section-head h2::after { content: ''; display: inline-block; width: 22px; height: 2px; background: var(--text-muted); opacity: 0.5; }
 .section-head .hint { color: var(--text-muted); font-size: 14px; }
 
 /* ─── Graph horizontal des sessions ──────────────────────────────────────── */
 
 .chart-row {
   display: grid;
-  grid-template-columns: 220px 1fr 200px;
+  grid-template-columns: 240px 1fr 220px;
   gap: 18px;
   align-items: center;
   padding: 16px 20px;
   border-bottom: 1px solid var(--border);
 }
 .chart-row:last-child { border-bottom: none; }
+.chart-row .meta { display: flex; align-items: center; gap: 14px; }
+.session-thumb { width: 56px; height: 56px; border-radius: 8px; flex-shrink: 0; }
 .chart-row .meta .topic-title { font-weight: 700; font-size: 14px; }
-.chart-row .meta .date-label { color: var(--text-muted); font-size: 12.5px; margin-top: 2px; }
+.chart-row .meta .date-label { display: flex; align-items: center; gap: 5px; color: var(--text-muted); font-size: 12.5px; margin-top: 2px; }
 
 .bar-track {
   position: relative;
@@ -387,32 +437,74 @@ footer.page-footer { color: var(--text-muted); font-size: 13px; padding-top: 20p
   z-index: 0;
 }
 .timeline-dot {
-  width: 32px;
-  height: 32px;
+  width: 26px;
+  height: 26px;
   border-radius: 50%;
-  background: var(--accent);
+  background: var(--text);
   color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 700;
-  font-size: 14px;
-  margin: 0 auto 12px;
+  font-size: 12px;
+  margin: 0 auto 14px;
   position: relative;
   z-index: 1;
+}
+.timeline-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: rgba(232, 171, 92, 0.16);
+  color: #c8792e;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 14px;
 }
 .timeline-step p { font-size: 13px; color: var(--text); line-height: 1.5; margin: 0; }
 
 .engagement-note {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
   background: rgba(245, 158, 11, 0.08);
   border: 1px solid rgba(245, 158, 11, 0.25);
   border-radius: var(--radius);
-  padding: 14px 18px;
+  padding: 16px 20px;
   font-size: 13px;
   color: var(--text);
   line-height: 1.6;
 }
-.engagement-note p { margin: 0 0 8px; }
+.engagement-note .en-text { display: flex; align-items: flex-start; gap: 12px; flex: 1 1 380px; }
+.engagement-note .en-icon { color: #d97706; margin-top: 2px; flex-shrink: 0; }
+.engagement-note p { margin: 0; }
+.engagement-note .link-btn { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; flex-shrink: 0; }
+
+/* ─── Bande de réassurance (bas de page) ──────────────────────────────────── */
+.feature-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 24px;
+  padding: 32px 0 8px;
+  border-top: 1px solid var(--border);
+}
+.feature-item { display: flex; gap: 14px; align-items: flex-start; }
+.feature-item .icon-circle {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(43, 128, 255, 0.1);
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.feature-item strong { display: block; font-size: 14px; margin-bottom: 3px; }
+.feature-item p { color: var(--text-muted); font-size: 13px; margin: 0; }
 .link-btn {
   background: none;
   border: none;
