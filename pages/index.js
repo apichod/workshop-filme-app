@@ -483,9 +483,12 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
   const [status, setStatus] = useState({ loading: false, error: '', results: [] });
   const [showTerms, setShowTerms] = useState(false);
   const [showTopicsJson, setShowTopicsJson] = useState(false);
+  const [categoryFilter, setCategoryFilter] = useState('');
 
   const saturdays = nextSaturdays(8);
   const selectableTopics = topics.filter((t) => !t.archived);
+  const usedCategories = TOPIC_CATEGORIES.filter((c) => topics.some((t) => t.category === c));
+  const filteredTopics = categoryFilter ? topics.filter((t) => t.category === categoryFilter) : topics;
 
   function updateTopicInList(updated) {
     setTopics((list) => list.map((t) => (t.id === updated.id ? updated : t)));
@@ -683,12 +686,36 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
               </button>
             )}
           </div>
+          {usedCategories.length > 0 && (
+            <div className="category-filter">
+              <button
+                type="button"
+                className={`filter-pill ${!categoryFilter ? 'active' : ''}`}
+                onClick={() => setCategoryFilter('')}
+              >
+                Toutes
+              </button>
+              {usedCategories.map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  className={`filter-pill ${categoryFilter === c ? 'active' : ''}`}
+                  onClick={() => setCategoryFilter(c)}
+                >
+                  {c}
+                </button>
+              ))}
+            </div>
+          )}
+
           {topics.length === 0 && !isAdmin ? (
             <div className="card"><div className="empty">Aucune formation disponible pour le moment.</div></div>
+          ) : filteredTopics.length === 0 ? (
+            <div className="card"><div className="empty">Aucune formation dans cette catégorie pour le moment.</div></div>
           ) : (
             <div className="topics-grid">
-              {topics.map((t, i) => (
-                <TopicCard key={t.id} topic={t} index={i} isAdmin={isAdmin} onOpenRegister={(id) => openModal(id, null)} onSaved={updateTopicInList} />
+              {filteredTopics.map((t) => (
+                <TopicCard key={t.id} topic={t} index={topics.indexOf(t)} isAdmin={isAdmin} onOpenRegister={(id) => openModal(id, null)} onSaved={updateTopicInList} />
               ))}
               {isAdmin && <NewTopicCard onCreated={addTopicToList} />}
             </div>
