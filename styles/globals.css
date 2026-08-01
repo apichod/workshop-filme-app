@@ -208,7 +208,7 @@ h1, h2, h3, .hero h1, .section-head h2, .topic-card h3 { font-family: var(--font
   position: relative;
 }
 .modal h2 { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
-.modal .modal-sub { color: var(--text-muted); font-size: 13px; margin-bottom: 20px; }
+.modal .modal-sub { color: var(--text-muted); font-size: 14px; margin-bottom: 20px; }
 .modal-close {
   position: absolute; top: 20px; right: 20px;
   background: none; border: none; color: var(--text-muted); font-size: 18px; cursor: pointer;
@@ -277,8 +277,9 @@ h1, h2, h3, .hero h1, .section-head h2, .topic-card h3 { font-family: var(--font
   display: flex; align-items: baseline; justify-content: space-between;
   margin-bottom: 18px; flex-wrap: wrap; gap: 8px;
 }
-.section-head h2 { font-size: 19px; font-weight: 400; }
-.section-head .hint { color: var(--text-muted); font-size: 13px; }
+/* h2 desktop du thème Dawn : calc(--font-heading-scale * 2.2rem) = 22px */
+.section-head h2 { font-size: 22px; font-weight: 400; }
+.section-head .hint { color: var(--text-muted); font-size: 14px; }
 
 /* ─── Graph horizontal des sessions ──────────────────────────────────────── */
 
@@ -355,12 +356,13 @@ h1, h2, h3, .hero h1, .section-head h2, .topic-card h3 { font-family: var(--font
   to { opacity: 1; transform: none; }
 }
 .topic-card .idx { font-size: 11px; color: var(--accent); font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
-.topic-card h3 { font-size: 16px; font-weight: 700; line-height: 1.3; }
-.topic-card p { color: var(--text-muted); font-size: 13px; flex: 1; }
+/* h3 desktop du thème Dawn : calc(--font-heading-scale * 1.8rem) = 18px */
+.topic-card h3 { font-size: 18px; font-weight: 700; line-height: 1.3; }
+.topic-card p { color: var(--text-muted); font-size: 14px; flex: 1; }
 .topic-card .level { font-size: 12px; color: var(--text-muted); border-top: 1px solid var(--border); padding-top: 10px; }
 .topic-card .btn { align-self: flex-start; }
 
-footer.page-footer { color: var(--text-muted); font-size: 12px; padding-top: 20px; border-top: 1px solid var(--border); }
+footer.page-footer { color: var(--text-muted); font-size: 13px; padding-top: 20px; border-top: 1px solid var(--border); }
 
 /* ─── Timeline "comment ça marche" ────────────────────────────────────────── */
 
