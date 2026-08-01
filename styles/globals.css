@@ -21,14 +21,14 @@
   --red:          #F53669;
   --radius:       6px;
   --shadow:       0 1px 4px rgba(0,0,0,0.06), 0 2px 16px rgba(0,0,0,0.04);
-  --font-body:    'Source Sans Pro', sans-serif;
-  --font-heading: 'Open Sans', sans-serif;
+  --font-body-family:    'Source Sans Pro', sans-serif;
+  --font-heading-family: 'Open Sans', sans-serif;
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html { font-size: 16px; }
 body {
-  font-family: var(--font-body);
+  font-family: var(--font-body-family);
   background: var(--bg);
   color: var(--text);
   font-size: 14px;
@@ -37,7 +37,7 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 a { color: var(--accent); }
-h1, h2, h3, .hero h1, .section-head h2, .topic-card h3 { font-family: var(--font-heading); letter-spacing: 0.6px; }
+h1, h2, h3, .hero h1, .section-head h2, .topic-card h3 { font-family: var(--font-heading-family); letter-spacing: 0.6px; }
 
 /* ─── Cards / badges / boutons / forms / modale (repris de portail-filme) ─── */
 
@@ -240,7 +240,7 @@ h1, h2, h3, .hero h1, .section-head h2, .topic-card h3 { font-family: var(--font
 .brand-crumb { margin-bottom: 0; }
 .breadcrumb {
   display: block;
-  font-family: var(--font-body);
+  font-family: var(--font-body-family);
   font-size: 13px;
   color: #5F5F5F;
   letter-spacing: 0.4px;
