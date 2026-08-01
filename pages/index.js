@@ -818,7 +818,12 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
 
       <div className="page" style={isAdmin ? { paddingTop: 56 } : undefined}>
         <header className="hero">
-          <img src="https://www.filme.fr/cdn/shop/files/Filme-Logo-sd.svg?v=1707646401&width=140" alt="Filme" className="logo" />
+          <div className="brand-crumb">
+            <a href="https://www.filme.fr" title="Retour à filme.fr">
+              <img src="https://www.filme.fr/cdn/shop/files/Filme-Logo-sd.svg?v=1707646401&width=120" alt="Filme" className="logo" />
+            </a>
+            <nav className="breadcrumb"><a href="https://www.filme.fr">filme.fr</a> › Workshops</nav>
+          </div>
           <EditableText isAdmin={isAdmin} tag="h1" value={content.hero_title} onSave={(v) => saveContent('hero_title', v)} />
           <EditableText isAdmin={isAdmin} tag="p" className="lead" multiline value={content.hero_lead} onSave={(v) => saveContent('hero_lead', v)} />
           <div className="pill-row">

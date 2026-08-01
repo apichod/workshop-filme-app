@@ -47,8 +47,11 @@ export default function Login() {
       </Head>
       <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div className="form-card">
-          <div className="form-logo">
-            <img src="https://www.filme.fr/cdn/shop/files/Filme-Logo-sd.svg?v=1707646401&width=120" alt="Filme" style={{ height: 28, display: 'block' }} />
+          <div className="brand-crumb">
+            <a href="https://www.filme.fr" title="Retour à filme.fr">
+              <img src="https://www.filme.fr/cdn/shop/files/Filme-Logo-sd.svg?v=1707646401&width=120" alt="Filme" className="logo" />
+            </a>
+            <nav className="breadcrumb"><a href="https://www.filme.fr">filme.fr</a> › Workshops</nav>
           </div>
           <div className="form-tagline">Connexion à votre espace Workshops</div>
 

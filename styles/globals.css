@@ -1,37 +1,42 @@
 /* ═══════════════════════════════════════════════════════════════
    Workshop Filme — Design System
-   Repris tel quel de portail-filme/styles/globals.css
-   (basé sur location.filme.fr — Open Sans, blanc/bleu) + composants
-   spécifiques à la page workshop (chart horizontal, cartes topics).
+   Aligné sur www.filme.fr (extrait par inspection live du site) :
+   Source Sans Pro pour le corps/l'interface, Open Sans pour les
+   titres, fond blanc, boutons noir/blanc — pour que ce sous-site
+   se ressente comme une continuité de filme.fr et non un autre site.
    ═══════════════════════════════════════════════════════════════ */
 
-@import url('https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Source+Sans+Pro:ital,wght@0,400;0,600;0,700;1,400&family=Open+Sans:ital,wght@0,400;0,600;0,700;1,400&display=swap');
 
 :root {
-  --bg:           #f6f8f8;
+  --bg:           #ffffff;
   --surface:      #ffffff;
   --primary:      #395DB8;
   --accent:       #2B80FF;
-  --text:         #140202;
+  --text:         #121212;
   --text-muted:   #8C8F90;
-  --border:       rgba(20, 2, 2, 0.15);
+  --border:       rgba(18, 18, 18, 0.12);
   --border-focus: #2B80FF;
   --green:        #00AD6F;
   --red:          #F53669;
   --radius:       8px;
   --shadow:       0 1px 4px rgba(0,0,0,0.06), 0 2px 16px rgba(0,0,0,0.04);
+  --font-body:    'Source Sans Pro', sans-serif;
+  --font-heading: 'Open Sans', sans-serif;
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html { font-size: 16px; }
 body {
-  font-family: 'Open Sans', sans-serif;
+  font-family: var(--font-body);
   background: var(--bg);
   color: var(--text);
   line-height: 1.5;
+  letter-spacing: 0.4px;
   -webkit-font-smoothing: antialiased;
 }
 a { color: var(--accent); }
+h1, h2, h3, .hero h1, .section-head h2, .topic-card h3 { font-family: var(--font-heading); letter-spacing: 0.6px; }
 
 /* ─── Cards / badges / boutons / forms / modale (repris de portail-filme) ─── */
 
@@ -88,7 +93,8 @@ a { color: var(--accent); }
   padding: 9px 18px;
   border-radius: var(--radius);
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 400;
+  letter-spacing: 0.6px;
   font-family: inherit;
   cursor: pointer;
   border: 1px solid transparent;
@@ -159,6 +165,23 @@ a { color: var(--accent); }
   margin-top: 12px;
 }
 
+/* Carte de connexion (page /login) */
+.form-card {
+  width: 100%;
+  max-width: 380px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 32px 28px;
+}
+.form-logo { margin-bottom: 18px; }
+.form-tagline { color: var(--text-muted); font-size: 13px; margin-bottom: 22px; }
+
+/* En-tête de page simple (admin, mes-inscriptions…) */
+.page-header { margin-bottom: 22px; }
+.page-header h1 { font-size: 26px; font-weight: 400; margin-bottom: 6px; }
+
 .modal-overlay {
   position: fixed;
   inset: 0;
@@ -199,14 +222,29 @@ a { color: var(--accent); }
 }
 
 .hero {
-  padding: 48px 0 36px;
+  padding: 24px 0 36px;
   border-bottom: 1px solid var(--border);
   margin-bottom: 40px;
 }
-.hero .logo { height: 26px; display: block; margin-bottom: 22px; }
+.hero .logo { height: 18px; display: block; }
+/* Repère "vous êtes toujours chez Filme" — même schéma que le fil d'ariane
+   ("Home › Le blog de Filme") utilisé sur www.filme.fr. */
+.brand-crumb {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 22px;
+}
+.breadcrumb {
+  font-size: 13px;
+  color: var(--text-muted);
+  letter-spacing: 0.4px;
+}
+.breadcrumb a { color: var(--text-muted); text-decoration: none; }
+.breadcrumb a:hover { color: var(--text); text-decoration: underline; }
 .hero h1 {
-  font-size: clamp(24px, 3.4vw, 34px);
-  font-weight: 700;
+  font-size: clamp(24px, 3.4vw, 32px);
+  font-weight: 400;
   color: var(--text);
   max-width: 720px;
   margin-bottom: 12px;
@@ -229,7 +267,7 @@ a { color: var(--accent); }
   display: flex; align-items: baseline; justify-content: space-between;
   margin-bottom: 18px; flex-wrap: wrap; gap: 8px;
 }
-.section-head h2 { font-size: 19px; font-weight: 700; }
+.section-head h2 { font-size: 19px; font-weight: 400; }
 .section-head .hint { color: var(--text-muted); font-size: 13px; }
 
 /* ─── Graph horizontal des sessions ──────────────────────────────────────── */
@@ -278,16 +316,18 @@ a { color: var(--accent); }
    légèrement arrondis (pas des pilules), fond blanc + bordure fine à l'état
    inactif, noir plein à l'état actif. */
 .category-filter { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
+/* Pastilles de filtre — reprises telles quelles de www.filme.fr/blogs/le-blog-de-filme
+   (tags "Tous / Clip / Documentaire…") : pilule pleinement arrondie, fine bordure
+   grise, actif en noir plein. */
 .filter-pill {
   background: transparent;
-  border: 1px solid var(--border);
-  color: var(--text);
-  font-size: 13px;
-  font-weight: 500;
-  padding: 6px 12px;
-  border-radius: 8px;
+  border: 1px solid rgba(18, 18, 18, 0.15);
+  color: rgba(18, 18, 18, 0.8);
+  font-size: 14px;
+  font-weight: 400;
+  padding: 5px 10px;
+  border-radius: 999px;
   cursor: pointer;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
   transition: background 0.15s, color 0.15s, border-color 0.15s;
 }
 .filter-pill:hover { border-color: var(--text); }

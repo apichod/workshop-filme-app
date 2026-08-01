@@ -43,6 +43,12 @@ export default function MyRegistrations({ session }) {
       <UserBar session={session} />
 
       <div className="page" style={{ maxWidth: 720, margin: '0 auto', padding: '80px 24px 60px' }}>
+        <div className="brand-crumb">
+          <a href="https://www.filme.fr" title="Retour à filme.fr">
+            <img src="https://www.filme.fr/cdn/shop/files/Filme-Logo-sd.svg?v=1707646401&width=120" alt="Filme" className="logo" />
+          </a>
+          <nav className="breadcrumb"><a href="https://www.filme.fr">filme.fr</a> › Workshops</nav>
+        </div>
         <div className="page-header">
           <h1>Mes inscriptions</h1>
           <p style={{ color: 'var(--text-muted)', fontSize: 13 }}>
