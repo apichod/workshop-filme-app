@@ -251,6 +251,15 @@ a { color: var(--accent); }
   transition: width .4s ease;
 }
 .bar-fill.full { background: linear-gradient(90deg, #00915d, var(--green)); }
+.bar-threshold-marker {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: rgba(20, 2, 2, 0.22);
+  z-index: 1;
+  cursor: help;
+}
 .bar-label {
   position: absolute; left: 10px; top: 0; bottom: 0;
   display: flex; align-items: center;
