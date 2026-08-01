@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import Head from 'next/head';
 import { withAuth } from '../../lib/auth';
 import AdminBar from '../../components/AdminBar';
+import UserBar from '../../components/UserBar';
 
 function NewTopicForm({ onCreated }) {
   const [open, setOpen] = useState(false);
@@ -174,7 +175,8 @@ export default function AdminTopics({ admin }) {
         <title>Admin — Formations</title>
         <meta name="robots" content="noindex" />
       </Head>
-      <AdminBar email={admin.email} />
+      <AdminBar />
+      <UserBar session={admin} offset />
       <div style={{ maxWidth: 720, margin: '0 auto', padding: '80px 24px 60px' }}>
         <div className="page-header">
           <h1>Formations</h1>

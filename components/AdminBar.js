@@ -3,7 +3,9 @@ import { useRouter } from 'next/router';
 
 // Bandeau admin — repris du pattern AdminBar de portail-filme/pages/dashboard.js
 // (recherche par email + navigation), adapté sans sidebar (pleine largeur ici).
-export default function AdminBar({ email, onOpenPreferences }) {
+// L'identité (email connecté / déconnexion / mes inscriptions) est gérée par
+// UserBar, affiché séparément dans le coin en haut à droite pour tout le monde.
+export default function AdminBar({ onOpenPreferences }) {
   const router = useRouter();
   const [search, setSearch] = useState(router.query.email || '');
 
@@ -49,8 +51,6 @@ export default function AdminBar({ email, onOpenPreferences }) {
       {onOpenPreferences && (
         <button type="button" className="btn btn-ghost btn-sm" onClick={onOpenPreferences}>⚙️ Préférences</button>
       )}
-      <span style={{ fontSize: 12, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{email}</span>
-      <a href="/api/admin/logout" className="btn btn-ghost btn-sm">Déconnexion</a>
     </div>
   );
 }

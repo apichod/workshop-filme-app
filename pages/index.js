@@ -6,6 +6,7 @@ import { getSiteContent, CONTENT_DEFAULTS } from '../lib/content';
 import { getClosedDates } from '../lib/closedDates';
 import { getSession } from '../lib/auth';
 import AdminBar from '../components/AdminBar';
+import UserBar from '../components/UserBar';
 
 // ─── Texte éditable en place (mode admin uniquement) ─────────────────────────
 function EditableText({ isAdmin, value, onSave, tag: Tag = 'span', multiline = false, className, style }) {
@@ -661,7 +662,7 @@ function TermsModal({ isAdmin, text, onSave, onClose }) {
   );
 }
 
-export default function Home({ initialSessions, initialTopics, initialContent, initialClosedDates, isAdmin, admin }) {
+export default function Home({ initialSessions, initialTopics, initialContent, initialClosedDates, isAdmin, session }) {
   const [sessions, setSessions] = useState(initialSessions);
   const [topics, setTopics] = useState(initialTopics);
   const [content, setContent] = useState(initialContent);
@@ -796,7 +797,8 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
         <meta name="description" content={`Ateliers pratiques du samedi chez Filme : prise en main du matériel de location, 149 € HT, ${CAPACITY} places maximum.`} />
       </Head>
 
-      {isAdmin && <AdminBar email={admin.email} onOpenPreferences={() => setShowPreferences(true)} />}
+      {isAdmin && <AdminBar onOpenPreferences={() => setShowPreferences(true)} />}
+      <UserBar session={session} offset={isAdmin} />
 
       <div className="page" style={isAdmin ? { paddingTop: 56 } : undefined}>
         <header className="hero">
@@ -1076,7 +1078,7 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
 
 export async function getServerSideProps(ctx) {
   const session = getSession(ctx.req);
-  const isAdmin = !!session;
+  const isAdmin = !!session?.isAdmin;
 
   try {
     const [sessions, topics, content, closedDates] = await Promise.all([
@@ -1092,7 +1094,7 @@ export async function getServerSideProps(ctx) {
         initialContent: content,
         initialClosedDates: closedDates,
         isAdmin,
-        admin: session || null,
+        session: session || null,
       },
     };
   } catch (err) {
@@ -1104,7 +1106,7 @@ export async function getServerSideProps(ctx) {
         initialContent: CONTENT_DEFAULTS,
         initialClosedDates: [],
         isAdmin,
-        admin: session || null,
+        session: session || null,
       },
     };
   }

@@ -45,10 +45,11 @@ façon d'envoyer des emails (`lib/mailer.js`, Gmail SMTP via nodemailer).
   `TOPIC_CATEGORIES` dans `lib/topics.js`) et `bonus` (texte libre "Bonus
   exclusif", ex: "Bon d'achat de 150 € HT sur votre 1ère location Ronin 4D
   chez Filme").
-- **Admin (`/admin`)** — connexion par lien magique (comme `monespace.filme.fr`),
-  réservée aux emails listés dans `ADMIN_EMAILS`. Bandeau fixe en haut avec un
-  champ pour rechercher un client par email (affiche son profil Booqable +
-  ses inscriptions aux workshops), et un bouton "⚙️ Préférences" (voir
+- **Admin (`/admin`)** — connexion par lien magique via `/login` (voir
+  "Connexion — clients et admin" ci-dessous), réservée aux emails listés dans
+  `ADMIN_EMAILS`. Bandeau fixe en haut (`AdminBar`) avec un champ pour
+  rechercher un client par email (affiche son profil Booqable + ses
+  inscriptions aux workshops), et un bouton "⚙️ Préférences" (voir
   ci-dessous). Le lien direct vers `/admin/topics` a été retiré du bandeau
   (l'édition des formations se fait désormais via la popup inline sur la
   homepage), mais la page reste accessible directement si besoin.
@@ -134,10 +135,24 @@ Variables d'environnement (voir `.env.example`) :
    créer le CNAME correspondant chez votre registrar DNS (même procédé que pour
    `monespace.filme.fr`).
 
-## Accès admin
+## Connexion — clients et admin
 
-Va sur `/admin/login`, entre un email présent dans `ADMIN_EMAILS`, un lien de
-connexion arrive par email (valable 15 min). Une fois connecté :
+Une seule page de connexion pour tout le monde : `/login`. Un email listé
+dans `ADMIN_EMAILS` passe directement en admin ; tout autre email doit
+correspondre à un vrai client Booqable (même vérification que le formulaire
+d'inscription) pour recevoir son lien de connexion (valable 15 min).
+
+Une fois connecté, un widget "utilisateur" apparaît en haut à droite de
+chaque page (`components/UserBar.js`) : email/nom, lien "Mes inscriptions",
+lien "Déconnexion". Si l'email est admin, le bandeau Admin plein largeur
+(`components/AdminBar.js`, recherche client + Préférences) s'affiche **en plus**,
+en haut de page.
+
+- `/mes-inscriptions` — pour tout client connecté : liste ses inscriptions à
+  venir et permet de les annuler soi-même (`pages/api/my/registrations/`). Si
+  l'annulation fait repasser une session sous le seuil de validation, elle
+  redevient automatiquement "non validée" (même logique que le retrait admin,
+  partagée via `lib/sessions.js#deleteRegistration`).
 - `/admin` — recherche un client par email (profil Booqable + ses inscriptions).
 - `/admin/topics` — gère les formations (création, édition, archivage).
 

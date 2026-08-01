@@ -3,6 +3,7 @@ import { useRouter } from 'next/router';
 import Head from 'next/head';
 import { withAuth } from '../../lib/auth';
 import AdminBar from '../../components/AdminBar';
+import UserBar from '../../components/UserBar';
 
 function fmtDT(iso) {
   if (!iso) return '—';
@@ -37,7 +38,8 @@ export default function AdminHome({ admin }) {
         <title>Admin — Workshops Filme</title>
         <meta name="robots" content="noindex" />
       </Head>
-      <AdminBar email={admin.email} />
+      <AdminBar />
+      <UserBar session={admin} offset />
       <div style={{ maxWidth: 780, margin: '0 auto', padding: '80px 24px 60px' }}>
         <div className="page-header">
           <h1>Consulter un client</h1>
