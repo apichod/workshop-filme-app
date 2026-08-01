@@ -233,21 +233,20 @@ h1, h2, h3, .hero h1, .section-head h2, .topic-card h3 { font-family: var(--font
   border-bottom: 1px solid var(--border);
   margin-bottom: 40px;
 }
-.hero .logo { height: 18px; display: block; }
+.hero .logo { height: 18px; display: block; margin-bottom: 20px; }
 /* Repère "vous êtes toujours chez Filme" — même schéma que le fil d'ariane
-   ("Home › Le blog de Filme") utilisé sur www.filme.fr. */
-.brand-crumb {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 22px;
-}
+   ("Home › Le blog de Filme") utilisé sur www.filme.fr : logo, puis 20px,
+   puis fil d'ariane, puis 20px, puis titre de page. */
+.brand-crumb { margin-bottom: 0; }
 .breadcrumb {
+  display: block;
+  font-family: var(--font-body);
   font-size: 13px;
-  color: var(--text-muted);
+  color: #5F5F5F;
   letter-spacing: 0.4px;
+  margin-bottom: 20px;
 }
-.breadcrumb a { color: var(--text-muted); text-decoration: none; }
+.breadcrumb a { color: #5F5F5F; text-decoration: none; }
 .breadcrumb a:hover { color: var(--text); text-decoration: underline; }
 .hero h1 {
   /* même taille que h1 sur www.filme.fr (mesurée : 30px, weight 400) */
