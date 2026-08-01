@@ -13,10 +13,18 @@ export default requireAuth(async function handler(req, res) {
   }
 
   if (req.method === 'POST') {
-    const { title, level, desc } = req.body || {};
+    const { title, level, desc, fullDescription, program, price, duration } = req.body || {};
     if (!title?.trim()) return res.status(400).json({ error: 'Le titre est requis' });
     try {
-      const topic = await createTopic({ title: title.trim(), level: (level || '').trim(), desc: (desc || '').trim() });
+      const topic = await createTopic({
+        title: title.trim(),
+        level: (level || '').trim(),
+        desc: (desc || '').trim(),
+        fullDescription: (fullDescription || '').trim(),
+        program: (program || '').trim(),
+        price: (price || '').trim(),
+        duration: (duration || '').trim(),
+      });
       return res.status(200).json({ topic });
     } catch (err) {
       console.error('[admin/topics POST]', err);

@@ -51,33 +51,155 @@ function EditableText({ isAdmin, value, onSave, tag: Tag = 'span', multiline = f
   );
 }
 
-// ─── Carte formation — mode normal + mode édition admin ──────────────────────
-function TopicCard({ topic, index, isAdmin, onOpenRegister, onSaved }) {
-  const [editing, setEditing] = useState(false);
-  const [form, setForm] = useState({ title: topic.title, level: topic.level, desc: topic.desc });
+// ─── Popup d'édition / création d'une formation (admin uniquement) ───────────
+function emptyTopicForm(topic) {
+  return {
+    title: topic?.title || '',
+    level: topic?.level || '',
+    desc: topic?.desc || '',
+    fullDescription: topic?.fullDescription || '',
+    program: topic?.program || '',
+    price: topic?.price || '',
+    duration: topic?.duration || '',
+  };
+}
+
+function TopicFormModal({ mode, topic, onClose, onSaved }) {
+  const [form, setForm] = useState(emptyTopicForm(topic));
   const [loading, setLoading] = useState(false);
-  const [archiving, setArchiving] = useState(false);
   const [error, setError] = useState('');
 
-  async function save() {
+  function set(field, value) {
+    setForm((f) => ({ ...f, [field]: value }));
+  }
+
+  async function submit(e) {
+    e.preventDefault();
+    if (!form.title.trim()) { setError('Le titre est requis.'); return; }
     setLoading(true);
     setError('');
     try {
-      const res = await fetch(`/api/admin/topics/${topic.id}`, {
-        method: 'PATCH',
+      const url = mode === 'create' ? '/api/admin/topics' : `/api/admin/topics/${topic.id}`;
+      const method = mode === 'create' ? 'POST' : 'PATCH';
+      const res = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Erreur');
-      onSaved(data.topic);
-      setEditing(false);
+      onSaved(data.topic, mode);
+      onClose();
     } catch (err) {
       setError(err.message);
     } finally {
       setLoading(false);
     }
   }
+
+  return (
+    <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="modal" style={{ maxWidth: 640, maxHeight: '85vh', overflowY: 'auto' }}>
+        <button className="modal-close" onClick={onClose}>✕</button>
+        <h2>{mode === 'create' ? 'Nouvelle formation' : 'Éditer la formation'}</h2>
+
+        <form onSubmit={submit} style={{ marginTop: 16 }}>
+          {error && <div className="form-error">{error}</div>}
+
+          <div className="form-group">
+            <label className="form-label">Titre</label>
+            <input className="form-input" value={form.title} onChange={(e) => set('title', e.target.value)} placeholder="Ex : Drone FPV cinématique" required />
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">Résumé pour la page d'accueil</label>
+            <textarea className="form-input" rows={3} value={form.desc} onChange={(e) => set('desc', e.target.value)} placeholder="Texte court affiché sur la carte formation, en accueil" />
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">Descriptif complet</label>
+            <textarea className="form-input" rows={5} value={form.fullDescription} onChange={(e) => set('fullDescription', e.target.value)} placeholder="Affiché dans la popup « En savoir plus » (visible par les visiteurs)" />
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">Programme</label>
+            <textarea className="form-input" rows={5} value={form.program} onChange={(e) => set('program', e.target.value)} placeholder={'Une ligne par étape, ex :\n1. Prise en main du matériel\n2. Exercices pratiques\n3. Debrief'} />
+          </div>
+
+          <div style={{ display: 'flex', gap: 12 }}>
+            <div className="form-group" style={{ flex: 1 }}>
+              <label className="form-label">Niveau</label>
+              <input className="form-input" value={form.level} onChange={(e) => set('level', e.target.value)} placeholder="Ex : Débutant" />
+            </div>
+            <div className="form-group" style={{ flex: 1 }}>
+              <label className="form-label">Prix</label>
+              <input className="form-input" value={form.price} onChange={(e) => set('price', e.target.value)} placeholder={`Sinon : ${PRICE_LABEL}`} />
+            </div>
+            <div className="form-group" style={{ flex: 1 }}>
+              <label className="form-label">Durée</label>
+              <input className="form-input" value={form.duration} onChange={(e) => set('duration', e.target.value)} placeholder="Sinon : 1 journée (9h–18h)" />
+            </div>
+          </div>
+
+          <div className="modal-actions">
+            <button type="button" className="btn btn-ghost" onClick={onClose}>Annuler</button>
+            <button type="submit" className="btn btn-primary" disabled={loading}>
+              {loading ? 'Enregistrement…' : mode === 'create' ? 'Créer la formation' : 'Enregistrer'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// ─── Popup public "En savoir plus" ────────────────────────────────────────────
+function TopicDetailModal({ topic, onClose, onRegister }) {
+  const programLines = (topic.program || '').split('\n').map((l) => l.trim()).filter(Boolean);
+
+  return (
+    <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="modal" style={{ maxWidth: 640, maxHeight: '85vh', overflowY: 'auto' }}>
+        <button className="modal-close" onClick={onClose}>✕</button>
+        <h2>{topic.title}</h2>
+        <div className="level" style={{ marginTop: 4 }}>
+          {[topic.level, topic.price || PRICE_LABEL, topic.duration || '1 journée (9h–18h)'].filter(Boolean).join(' · ')}
+        </div>
+
+        {topic.fullDescription && (
+          <p style={{ whiteSpace: 'pre-wrap', fontSize: 14, color: 'var(--text)', lineHeight: 1.7, marginTop: 20 }}>
+            {topic.fullDescription}
+          </p>
+        )}
+
+        {programLines.length > 0 && (
+          <>
+            <h3 style={{ fontSize: 15, marginTop: 20, marginBottom: 8 }}>Programme</h3>
+            <ul style={{ margin: 0, paddingLeft: 20, fontSize: 14, color: 'var(--text)', lineHeight: 1.8 }}>
+              {programLines.map((line, i) => <li key={i}>{line}</li>)}
+            </ul>
+          </>
+        )}
+
+        <div className="modal-actions">
+          <button type="button" className="btn btn-ghost" onClick={onClose}>Fermer</button>
+          {!topic.archived && (
+            <button type="button" className="btn btn-primary" onClick={() => { onRegister(topic.id); onClose(); }}>
+              Indiquer ses disponibilités
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Carte formation — mode normal + popups édition/détail (admin) ───────────
+function TopicCard({ topic, index, isAdmin, onOpenRegister, onSaved }) {
+  const [archiving, setArchiving] = useState(false);
+  const [error, setError] = useState('');
+  const [showDetail, setShowDetail] = useState(false);
+  const [showEdit, setShowEdit] = useState(false);
 
   async function toggleArchived() {
     setArchiving(true);
@@ -98,39 +220,6 @@ function TopicCard({ topic, index, isAdmin, onOpenRegister, onSaved }) {
     }
   }
 
-  if (editing) {
-    return (
-      <div className="card topic-card">
-        <div className="idx">Formation {String(index + 1).padStart(2, '0')} · édition</div>
-        {error && <div className="form-error">{error}</div>}
-        <div className="form-group">
-          <label className="form-label">Titre</label>
-          <input className="form-input" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
-        </div>
-        <div className="form-group">
-          <label className="form-label">Niveau</label>
-          <input className="form-input" value={form.level || ''} onChange={(e) => setForm({ ...form, level: e.target.value })} />
-        </div>
-        <div className="form-group">
-          <label className="form-label">Description</label>
-          <textarea className="form-input" rows={4} value={form.desc || ''} onChange={(e) => setForm({ ...form, desc: e.target.value })} />
-        </div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button
-            type="button"
-            className="btn btn-ghost btn-sm"
-            onClick={() => { setEditing(false); setForm({ title: topic.title, level: topic.level, desc: topic.desc }); setError(''); }}
-          >
-            Annuler
-          </button>
-          <button type="button" className="btn btn-primary btn-sm" onClick={save} disabled={loading}>
-            {loading ? 'Enregistrement…' : 'Enregistrer'}
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="card topic-card" style={{ opacity: topic.archived ? 0.55 : 1 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
@@ -139,86 +228,172 @@ function TopicCard({ topic, index, isAdmin, onOpenRegister, onSaved }) {
       </div>
       <h3>{topic.title}</h3>
       <p>{topic.desc}</p>
-      <div className="level">{topic.level} · {PRICE_LABEL} · 1 journée (9h–18h)</div>
+      <div className="level">{[topic.level, topic.price || PRICE_LABEL, topic.duration || '1 journée (9h–18h)'].filter(Boolean).join(' · ')}</div>
       {error && <div className="form-error">{error}</div>}
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
         {!topic.archived && (
           <button className="btn btn-primary btn-sm" onClick={() => onOpenRegister(topic.id)}>
             Indiquer ses disponibilités
           </button>
         )}
+        <button type="button" className="link-btn" onClick={() => setShowDetail(true)}>En savoir plus</button>
         {isAdmin && (
           <>
-            <button type="button" className="btn btn-ghost btn-sm" onClick={() => setEditing(true)}>✏️ Éditer</button>
+            <button type="button" className="btn btn-ghost btn-sm" onClick={() => setShowEdit(true)}>✏️ Éditer</button>
             <button type="button" className="btn btn-ghost btn-sm" onClick={toggleArchived} disabled={archiving}>
               {archiving ? '…' : topic.archived ? 'Désarchiver' : 'Archiver'}
             </button>
           </>
         )}
       </div>
+
+      {showDetail && <TopicDetailModal topic={topic} onClose={() => setShowDetail(false)} onRegister={onOpenRegister} />}
+      {showEdit && (
+        <TopicFormModal mode="edit" topic={topic} onClose={() => setShowEdit(false)} onSaved={onSaved} />
+      )}
     </div>
   );
 }
 
-// ─── Formulaire de création (admin uniquement) ───────────────────────────────
+// ─── Carte "+ Nouvelle formation" (admin uniquement) ─────────────────────────
 function NewTopicCard({ onCreated }) {
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ title: '', level: '', desc: '' });
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
 
-  async function submit(e) {
-    e.preventDefault();
-    if (!form.title.trim()) { setError('Le titre est requis.'); return; }
-    setLoading(true);
-    setError('');
+  return (
+    <>
+      <button
+        type="button"
+        className="card topic-card"
+        style={{ alignItems: 'center', justifyContent: 'center', border: '1px dashed var(--border)', boxShadow: 'none', cursor: 'pointer', minHeight: 160 }}
+        onClick={() => setOpen(true)}
+      >
+        <span style={{ fontWeight: 700, color: 'var(--accent)' }}>+ Nouvelle formation</span>
+      </button>
+      {open && (
+        <TopicFormModal mode="create" topic={null} onClose={() => setOpen(false)} onSaved={onCreated} />
+      )}
+    </>
+  );
+}
+
+// ─── Popup admin export / import JSON des formations ("log") ─────────────────
+function TopicsJsonModal({ topics, onClose, onImported }) {
+  const [tab, setTab] = useState('export');
+  const [importText, setImportText] = useState('');
+  const [log, setLog] = useState([]);
+  const [importing, setImporting] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const exportText = JSON.stringify(topics, null, 2);
+
+  async function copyExport() {
     try {
-      const res = await fetch('/api/admin/topics', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Erreur');
-      onCreated(data.topic);
-      setForm({ title: '', level: '', desc: '' });
-      setOpen(false);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
+      await navigator.clipboard.writeText(exportText);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      // Le presse-papiers peut être indisponible (contexte non sécurisé) — l'admin peut copier manuellement.
     }
   }
 
-  if (!open) {
-    return (
-      <button type="button" className="card topic-card" style={{ alignItems: 'center', justifyContent: 'center', border: '1px dashed var(--border)', boxShadow: 'none', cursor: 'pointer', minHeight: 160 }} onClick={() => setOpen(true)}>
-        <span style={{ fontWeight: 700, color: 'var(--accent)' }}>+ Nouvelle formation</span>
-      </button>
-    );
+  async function runImport() {
+    setLog([]);
+    let parsed;
+    try {
+      parsed = JSON.parse(importText);
+      if (!Array.isArray(parsed)) throw new Error('Le JSON doit être un tableau : [ { "title": "...", ... }, ... ]');
+    } catch (err) {
+      setLog([`✗ JSON invalide — ${err.message}`]);
+      return;
+    }
+
+    setImporting(true);
+    try {
+      const res = await fetch('/api/admin/topics/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ topics: parsed }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Erreur serveur');
+
+      const lines = data.results.map((r) =>
+        r.ok
+          ? `✓ ${r.title || r.id} — ${r.action === 'created' ? 'créée' : 'mise à jour'} (id: ${r.id})`
+          : `✗ ${r.title || r.id} — ${r.error}`
+      );
+      setLog(lines);
+
+      const refreshed = await fetch('/api/admin/topics');
+      const refreshedData = await refreshed.json();
+      if (refreshed.ok) onImported(refreshedData.topics);
+    } catch (err) {
+      setLog((l) => [...l, `✗ ${err.message}`]);
+    } finally {
+      setImporting(false);
+    }
   }
 
   return (
-    <form onSubmit={submit} className="card topic-card">
-      <div className="idx">Nouvelle formation</div>
-      {error && <div className="form-error">{error}</div>}
-      <div className="form-group">
-        <label className="form-label">Titre</label>
-        <input className="form-input" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="Ex : Drone FPV cinématique" required />
+    <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="modal" style={{ maxWidth: 680, maxHeight: '85vh', overflowY: 'auto' }}>
+        <button className="modal-close" onClick={onClose}>✕</button>
+        <h2>Export / Import des formations (JSON)</h2>
+
+        <div style={{ display: 'flex', gap: 8, marginTop: 16, marginBottom: 12 }}>
+          <button type="button" className={`btn btn-sm ${tab === 'export' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setTab('export')}>Export</button>
+          <button type="button" className={`btn btn-sm ${tab === 'import' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setTab('import')}>Import</button>
+        </div>
+
+        {tab === 'export' ? (
+          <>
+            <p style={{ color: 'var(--text-muted)', fontSize: 13, marginBottom: 8 }}>
+              Copiez ce JSON pour sauvegarder ou dupliquer vos formations ailleurs.
+            </p>
+            <textarea
+              className="form-input"
+              readOnly
+              rows={16}
+              value={exportText}
+              onFocus={(e) => e.target.select()}
+              style={{ fontFamily: 'monospace', fontSize: 12 }}
+            />
+            <div className="modal-actions">
+              <button type="button" className="btn btn-ghost" onClick={onClose}>Fermer</button>
+              <button type="button" className="btn btn-primary" onClick={copyExport}>{copied ? 'Copié ✓' : 'Copier'}</button>
+            </div>
+          </>
+        ) : (
+          <>
+            <p style={{ color: 'var(--text-muted)', fontSize: 13, marginBottom: 8 }}>
+              Collez un tableau JSON de formations. Une formation dont l'« id » existe déjà est mise à jour,
+              sinon elle est créée.
+            </p>
+            <textarea
+              className="form-input"
+              rows={12}
+              value={importText}
+              onChange={(e) => setImportText(e.target.value)}
+              placeholder='[ { "id": "ronin4d", "title": "…", "desc": "…", "fullDescription": "…", "program": "…", "level": "…", "price": "…", "duration": "…" } ]'
+              style={{ fontFamily: 'monospace', fontSize: 12 }}
+            />
+            {log.length > 0 && (
+              <div style={{ marginTop: 12, background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, padding: 12, fontFamily: 'monospace', fontSize: 12, maxHeight: 200, overflowY: 'auto' }}>
+                {log.map((line, i) => (
+                  <div key={i} style={{ color: line.startsWith('✗') ? 'var(--red)' : 'var(--green)' }}>{line}</div>
+                ))}
+              </div>
+            )}
+            <div className="modal-actions">
+              <button type="button" className="btn btn-ghost" onClick={onClose}>Fermer</button>
+              <button type="button" className="btn btn-primary" onClick={runImport} disabled={importing || !importText.trim()}>
+                {importing ? 'Import…' : 'Importer'}
+              </button>
+            </div>
+          </>
+        )}
       </div>
-      <div className="form-group">
-        <label className="form-label">Niveau</label>
-        <input className="form-input" value={form.level} onChange={(e) => setForm({ ...form, level: e.target.value })} placeholder="Ex : Débutant" />
-      </div>
-      <div className="form-group">
-        <label className="form-label">Description</label>
-        <textarea className="form-input" rows={4} value={form.desc} onChange={(e) => setForm({ ...form, desc: e.target.value })} />
-      </div>
-      <div style={{ display: 'flex', gap: 8 }}>
-        <button type="button" className="btn btn-ghost btn-sm" onClick={() => setOpen(false)}>Annuler</button>
-        <button type="submit" className="btn btn-primary btn-sm" disabled={loading}>{loading ? 'Création…' : 'Créer'}</button>
-      </div>
-    </form>
+    </div>
   );
 }
 
@@ -279,6 +454,7 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
   const [form, setForm] = useState({ name: '', email: '' });
   const [status, setStatus] = useState({ loading: false, error: '', results: [] });
   const [showTerms, setShowTerms] = useState(false);
+  const [showTopicsJson, setShowTopicsJson] = useState(false);
 
   const saturdays = nextSaturdays(8);
   const selectableTopics = topics.filter((t) => !t.archived);
@@ -468,9 +644,16 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
         </section>
 
         <section className="section">
-          <div className="section-head">
-            <EditableText isAdmin={isAdmin} tag="h2" value={content.topics_heading} onSave={(v) => saveContent('topics_heading', v)} />
-            <EditableText isAdmin={isAdmin} tag="span" className="hint" value={content.topics_hint} onSave={(v) => saveContent('topics_hint', v)} />
+          <div className="section-head" style={{ alignItems: 'flex-start', justifyContent: 'space-between' }}>
+            <div>
+              <EditableText isAdmin={isAdmin} tag="h2" value={content.topics_heading} onSave={(v) => saveContent('topics_heading', v)} />
+              <EditableText isAdmin={isAdmin} tag="span" className="hint" value={content.topics_hint} onSave={(v) => saveContent('topics_hint', v)} />
+            </div>
+            {isAdmin && (
+              <button type="button" className="link-btn" onClick={() => setShowTopicsJson(true)}>
+                ⇅ Export / Import JSON
+              </button>
+            )}
           </div>
           {topics.length === 0 && !isAdmin ? (
             <div className="card"><div className="empty">Aucune formation disponible pour le moment.</div></div>
@@ -585,6 +768,14 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
           text={content.cgv_text}
           onSave={(v) => saveContent('cgv_text', v)}
           onClose={() => setShowTerms(false)}
+        />
+      )}
+
+      {showTopicsJson && (
+        <TopicsJsonModal
+          topics={topics}
+          onClose={() => setShowTopicsJson(false)}
+          onImported={(list) => setTopics(list)}
         />
       )}
     </>

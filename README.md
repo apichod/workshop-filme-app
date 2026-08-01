@@ -36,19 +36,40 @@ façon d'envoyer des emails (`lib/mailer.js`, Gmail SMTP via nodemailer).
   niveau, description, `archived`) + migration des 10 formations qui étaient
   codées en dur, + une clé étrangère `workshop_sessions.topic_id → workshop_topics.id`
   pour permettre les jointures admin.
+- **`supabase_topics_fields_migration.sql`** — ajoute les champs détaillés de
+  chaque formation : `full_description` (descriptif complet), `program`
+  (programme), `price` (prix spécifique, sinon le prix global s'applique),
+  `duration` (durée spécifique, sinon "1 journée (9h–18h)").
 - **Admin (`/admin`)** — connexion par lien magique (comme `monespace.filme.fr`),
   réservée aux emails listés dans `ADMIN_EMAILS`. Bandeau fixe en haut avec un
   champ pour rechercher un client par email (affiche son profil Booqable +
   ses inscriptions aux workshops), et un lien vers `/admin/topics`.
 - **Édition directement sur la homepage** — connecté en admin, `workshop.filme.fr`
-  affiche le bandeau et devient éditable en place : chaque formation a un bouton
-  ✏️ Éditer + Archiver/Désarchiver, une carte "+ Nouvelle formation" apparaît,
-  et les textes de la page (titre, sous-titre, pastilles hors prix, intitulés de
-  section, footer) sont cliquables pour être modifiés — stockés dans
-  `workshop_site_content` (`lib/content.js`). Le prix et la capacité (6) restent
-  volontairement dans le code car ils pilotent la logique de validation.
-- **`/admin/topics`** — vue alternative dédiée pour créer/éditer/archiver les
-  formations (fait la même chose que l'édition inline sur la homepage).
+  affiche le bandeau et devient éditable en place :
+  - Chaque formation a un bouton ✏️ Éditer qui ouvre une **popup** avec les champs
+    Titre, Résumé (pour la carte homepage), Descriptif complet, Programme, Niveau,
+    Prix, Durée — ainsi qu'Archiver/Désarchiver. Une carte "+ Nouvelle formation"
+    ouvre la même popup en mode création.
+  - Chaque formation a aussi un lien public **"En savoir plus"** qui ouvre une
+    popup (visible par tous les visiteurs) avec le descriptif complet, le
+    programme, le niveau, le prix et la durée.
+  - Bouton **"⇅ Export / Import JSON"** au-dessus de la grille des formations :
+    exporte toutes les formations en JSON (à copier/coller), et permet
+    d'importer un tableau JSON (met à jour les formations dont l'`id` existe
+    déjà, crée les autres). Le résultat de l'import s'affiche ligne par ligne,
+    façon log (`✓ … créée/mise à jour` ou `✗ … erreur`) — voir
+    `pages/api/admin/topics/import.js` / `lib/topics.js#importTopic`.
+  - Les textes de la page (titre, sous-titre, pastilles hors prix, intitulés de
+    section, footer) sont cliquables pour être modifiés — stockés dans
+    `workshop_site_content` (`lib/content.js`).
+  - Le prix global (149 € HT) et les seuils `CAPACITY` (10, capacité max d'une
+    session) / `VALIDATION_THRESHOLD` (4, seuil qui déclenche la validation et
+    l'email de confirmation finale) restent dans le code (`lib/topics.js`) car
+    ils pilotent la logique métier.
+- **`/admin/topics`** — vue alternative dédiée (titre/niveau/description
+  uniquement) pour créer/éditer/archiver les formations rapidement ; l'édition
+  complète (avec descriptif/programme/prix/durée) se fait via la popup sur la
+  homepage.
 - **Build vérifié** (`next build` passe sans erreur).
 
 ## Mise en route
@@ -64,8 +85,8 @@ Variables d'environnement (voir `.env.example`) :
 - `BOOQABLE_COMPANY_SLUG`, `BOOQABLE_API_KEY` — les mêmes que `portail-filme`.
 - `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` — projet Supabase dédié. Coller
   **dans l'ordre** `supabase.sql`, puis `supabase_topics_migration.sql`, puis
-  `supabase_content_migration.sql` dans l'éditeur SQL Supabase avant le premier
-  test.
+  `supabase_topics_fields_migration.sql`, puis `supabase_content_migration.sql`
+  dans l'éditeur SQL Supabase avant le premier test.
 - `SMTP_USER`, `SMTP_PASS` — mêmes identifiants Gmail que `portail-filme`
   (mot de passe d'application Google, voir `myaccount.google.com/apppasswords`).
 - `ADMIN_EMAILS` — reçoit l'alerte "session validée" ET seul(s) autorisé(s) à
