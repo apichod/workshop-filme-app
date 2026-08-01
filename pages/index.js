@@ -144,7 +144,7 @@ function TopicCard({ topic, index, isAdmin, onOpenRegister, onSaved }) {
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
         {!topic.archived && (
           <button className="btn btn-primary btn-sm" onClick={() => onOpenRegister(topic.id)}>
-            Choisir un ou plusieurs samedis
+            Indiquer ses disponibilités
           </button>
         )}
         {isAdmin && (
