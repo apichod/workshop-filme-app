@@ -673,11 +673,17 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
   const [showPreferences, setShowPreferences] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState('');
   const [closedDates, setClosedDates] = useState(initialClosedDates || []);
+  const [sessionSort, setSessionSort] = useState('rate'); // 'rate' (défaut) ou 'date'
 
   const saturdays = nextSaturdays(8, closedDates);
   const selectableTopics = topics.filter((t) => !t.archived);
   const usedCategories = TOPIC_CATEGORIES.filter((c) => topics.some((t) => t.category === c));
   const filteredTopics = categoryFilter ? topics.filter((t) => t.category === categoryFilter) : topics;
+  const sortedSessions = [...sessions].sort((a, b) =>
+    sessionSort === 'date'
+      ? a.dateIso.localeCompare(b.dateIso)
+      : b.rate - a.rate || a.dateIso.localeCompare(b.dateIso)
+  );
 
   function updateTopicInList(updated) {
     setTopics((list) => list.map((t) => (t.id === updated.id ? updated : t)));
@@ -806,9 +812,29 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
         </header>
 
         <section className="section">
-          <div className="section-head">
-            <EditableText isAdmin={isAdmin} tag="h2" value={content.sessions_heading} onSave={(v) => saveContent('sessions_heading', v)} />
-            <EditableText isAdmin={isAdmin} tag="span" className="hint" value={content.sessions_hint} onSave={(v) => saveContent('sessions_hint', v)} />
+          <div className="section-head" style={{ alignItems: 'flex-start', justifyContent: 'space-between' }}>
+            <div>
+              <EditableText isAdmin={isAdmin} tag="h2" value={content.sessions_heading} onSave={(v) => saveContent('sessions_heading', v)} />
+              <EditableText isAdmin={isAdmin} tag="span" className="hint" value={content.sessions_hint} onSave={(v) => saveContent('sessions_hint', v)} />
+            </div>
+            {sessions.length > 0 && (
+              <div className="category-filter">
+                <button
+                  type="button"
+                  className={`filter-pill ${sessionSort === 'rate' ? 'active' : ''}`}
+                  onClick={() => setSessionSort('rate')}
+                >
+                  Taux de remplissage
+                </button>
+                <button
+                  type="button"
+                  className={`filter-pill ${sessionSort === 'date' ? 'active' : ''}`}
+                  onClick={() => setSessionSort('date')}
+                >
+                  Date
+                </button>
+              </div>
+            )}
           </div>
           <div className="card">
             {sessions.length === 0 ? (
@@ -817,7 +843,7 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
                 Aucune session pour le moment. Choisissez une formation ci-dessous pour proposer un samedi.
               </div>
             ) : (
-              sessions.map((s) => {
+              sortedSessions.map((s) => {
                 // La barre représente la capacité max (1 inscrit = 1/capacity de la
                 // largeur), et le remplissage passe au vert une fois le seuil de
                 // validation atteint.
