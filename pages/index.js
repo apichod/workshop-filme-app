@@ -255,8 +255,8 @@ function TopicCard({ topic, index, isAdmin, onOpenRegister, onSaved }) {
       </div>
       <h3>{topic.title}</h3>
       <p>{topic.desc}</p>
+      {topic.bonus && <div className="bonus-note">🎁 {topic.bonus}</div>}
       <div className="level">{[topic.level, topic.price || PRICE_LABEL, topic.duration || '1 journée (9h–18h)'].filter(Boolean).join(' · ')}</div>
-      {topic.bonus && <div className="bonus-note" style={{ marginTop: 4 }}>🎁 {topic.bonus}</div>}
       {error && <div className="form-error">{error}</div>}
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
         {!topic.archived && (
