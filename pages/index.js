@@ -109,6 +109,14 @@ function TopicFormModal({ mode, topic, onClose, onSaved }) {
           {error && <div className="form-error">{error}</div>}
 
           <div className="form-group">
+            <label className="form-label">Catégorie</label>
+            <select className="form-input" value={form.category} onChange={(e) => set('category', e.target.value)}>
+              <option value="">— Aucune —</option>
+              {TOPIC_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+
+          <div className="form-group">
             <label className="form-label">Titre</label>
             <input className="form-input" value={form.title} onChange={(e) => set('title', e.target.value)} placeholder="Ex : Drone FPV cinématique" required />
           </div>
@@ -141,14 +149,6 @@ function TopicFormModal({ mode, topic, onClose, onSaved }) {
               <label className="form-label">Durée</label>
               <input className="form-input" value={form.duration} onChange={(e) => set('duration', e.target.value)} placeholder="Sinon : 1 journée (9h–18h)" />
             </div>
-          </div>
-
-          <div className="form-group">
-            <label className="form-label">Catégorie</label>
-            <select className="form-input" value={form.category} onChange={(e) => set('category', e.target.value)}>
-              <option value="">— Aucune —</option>
-              {TOPIC_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
-            </select>
           </div>
 
           <div className="form-group">
