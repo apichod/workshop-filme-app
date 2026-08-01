@@ -85,17 +85,17 @@ h1, h2, h3, .hero h1, .section-head h2, .topic-card h3 { font-family: var(--font
   white-space: normal;
 }
 
-/* Boutons — même palette/forme que cvp.com/events : primaire en noir plein,
-   secondaire en blanc + bordure fine, coins légèrement arrondis (8px). */
+/* Boutons — valeurs reprises du base.css réel du thème Dawn (filme.fr) :
+   .button { padding: 0 3rem; font-size: 1.5rem; letter-spacing: 0.1rem; } */
 .btn {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 9px 18px;
+  padding: 10px 24px;
   border-radius: var(--radius);
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 400;
-  letter-spacing: 0.6px;
+  letter-spacing: 1px;
   font-family: inherit;
   cursor: pointer;
   border: 1px solid transparent;
@@ -109,16 +109,17 @@ h1, h2, h3, .hero h1, .section-head h2, .topic-card h3 { font-family: var(--font
 .btn-primary:hover:not(:disabled) { background: #2b2b2b; border-color: #2b2b2b; }
 .btn-ghost { background: transparent; color: var(--text); border-color: var(--border); }
 .btn-ghost:hover:not(:disabled) { background: var(--bg); color: var(--text); border-color: var(--text); }
-.btn-sm { padding: 5px 12px; font-size: 13px; }
+.btn-sm { padding: 6px 16px; font-size: 13px; letter-spacing: 0.6px; }
 
 .form-group { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
 .form-label { font-size: 13px; font-weight: 600; color: var(--text); }
 .form-input {
-  padding: 10px 14px;
+  /* .field__input du thème Dawn : font-size 1.6rem, hauteur ~4.5rem */
+  padding: 13px 16px;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  font-size: 14px;
+  font-size: 16px;
   color: var(--text);
   font-family: inherit;
   transition: border-color 0.15s, box-shadow 0.15s;
@@ -216,11 +217,15 @@ h1, h2, h3, .hero h1, .section-head h2, .topic-card h3 { font-family: var(--font
 
 /* ─── Page workshop — layout ─────────────────────────────────────────────── */
 
-/* Largeur/marges alignées sur --page-width du thème Dawn (1200px, 50px de marge) */
+/* Largeur/marges reprises de .page-width du thème Dawn : max-width 120rem
+   (1200px), padding 1.5rem en mobile, 5rem à partir de 750px. */
 .page {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 0 50px 80px;
+  padding: 0 15px 60px;
+}
+@media screen and (min-width: 750px) {
+  .page { padding: 0 50px 80px; }
 }
 
 .hero {
@@ -245,13 +250,14 @@ h1, h2, h3, .hero h1, .section-head h2, .topic-card h3 { font-family: var(--font
 .breadcrumb a { color: var(--text-muted); text-decoration: none; }
 .breadcrumb a:hover { color: var(--text); text-decoration: underline; }
 .hero h1 {
-  font-size: clamp(24px, 3.4vw, 32px);
+  /* même taille que h1 sur www.filme.fr (mesurée : 30px, weight 400) */
+  font-size: clamp(22px, 3vw, 30px);
   font-weight: 400;
   color: var(--text);
   max-width: 720px;
   margin-bottom: 12px;
 }
-.hero p.lead { color: var(--text-muted); font-size: 15px; max-width: 600px; margin-bottom: 22px; }
+.hero p.lead { color: var(--text-muted); font-size: 14px; max-width: 600px; margin-bottom: 22px; }
 .pill-row { display: flex; gap: 10px; flex-wrap: wrap; }
 .pill {
   background: var(--bg);
@@ -409,8 +415,9 @@ footer.page-footer { color: var(--text-muted); font-size: 12px; padding-top: 20p
   padding: 0;
   color: var(--accent);
   text-decoration: underline;
-  font-size: 13px;
-  font-weight: 600;
+  text-underline-offset: 3px;
+  font-size: 14px;
+  font-weight: 400;
   cursor: pointer;
   font-family: inherit;
 }
