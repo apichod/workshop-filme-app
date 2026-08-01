@@ -340,7 +340,7 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
           <EditableText isAdmin={isAdmin} tag="h1" value={content.hero_title} onSave={(v) => saveContent('hero_title', v)} />
           <EditableText isAdmin={isAdmin} tag="p" className="lead" multiline value={content.hero_lead} onSave={(v) => saveContent('hero_lead', v)} />
           <div className="pill-row">
-            <span className="pill price">{PRICE_LABEL} / personne</span>
+            <EditableText isAdmin={isAdmin} tag="span" className="pill" value={content.price_label} onSave={(v) => saveContent('price_label', v)} />
             <EditableText isAdmin={isAdmin} tag="span" className="pill" value={content.pill_capacity} onSave={(v) => saveContent('pill_capacity', v)} />
             <EditableText isAdmin={isAdmin} tag="span" className="pill" value={content.pill_audience} onSave={(v) => saveContent('pill_audience', v)} />
             <EditableText isAdmin={isAdmin} tag="span" className="pill" value={content.pill_validation} onSave={(v) => saveContent('pill_validation', v)} />

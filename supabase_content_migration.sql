@@ -10,6 +10,7 @@ create table if not exists workshop_site_content (
 );
 
 insert into workshop_site_content (key, value) values
+('price_label', '149 € HT / personne'),
 ('hero_title', 'Les ateliers du samedi, avec le matériel que vous louez déjà.'),
 ('hero_lead', 'Une journée 100% pratique (9h–18h) chez Filme à Montreuil, 6 participants maximum, pour prendre en main le matériel avant votre prochain tournage.'),
 ('pill_capacity', '6 places max par session'),
