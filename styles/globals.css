@@ -14,7 +14,10 @@
   --primary:      #395DB8;
   --accent:       #2B80FF;
   --text:         #121212;
-  --text-muted:   #8C8F90;
+  /* Texte secondaire — équivalent de rgba(18,18,18,.75) utilisé partout sur
+     filme.fr (nav, paragraphes, liens muted), notablement plus foncé que le
+     gris clair qu'on avait avant (qui donnait cette impression "tout est gris"). */
+  --text-muted:   #4d4d4d;
   --border:       rgba(18, 18, 18, 0.12);
   --border-focus: #2B80FF;
   --green:        #00AD6F;
