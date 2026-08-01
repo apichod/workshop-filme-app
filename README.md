@@ -40,9 +40,15 @@ façon d'envoyer des emails (`lib/mailer.js`, Gmail SMTP via nodemailer).
   réservée aux emails listés dans `ADMIN_EMAILS`. Bandeau fixe en haut avec un
   champ pour rechercher un client par email (affiche son profil Booqable +
   ses inscriptions aux workshops), et un lien vers `/admin/topics`.
-- **`/admin/topics`** — créer une formation, éditer titre/niveau/description,
-  et archiver/désarchiver (masque la formation du site public sans supprimer
-  l'historique des sessions déjà ouvertes avec elle).
+- **Édition directement sur la homepage** — connecté en admin, `workshop.filme.fr`
+  affiche le bandeau et devient éditable en place : chaque formation a un bouton
+  ✏️ Éditer + Archiver/Désarchiver, une carte "+ Nouvelle formation" apparaît,
+  et les textes de la page (titre, sous-titre, pastilles hors prix, intitulés de
+  section, footer) sont cliquables pour être modifiés — stockés dans
+  `workshop_site_content` (`lib/content.js`). Le prix et la capacité (6) restent
+  volontairement dans le code car ils pilotent la logique de validation.
+- **`/admin/topics`** — vue alternative dédiée pour créer/éditer/archiver les
+  formations (fait la même chose que l'édition inline sur la homepage).
 - **Build vérifié** (`next build` passe sans erreur).
 
 ## Mise en route
@@ -57,8 +63,9 @@ Variables d'environnement (voir `.env.example`) :
 
 - `BOOQABLE_COMPANY_SLUG`, `BOOQABLE_API_KEY` — les mêmes que `portail-filme`.
 - `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` — projet Supabase dédié. Coller
-  **dans l'ordre** `supabase.sql` puis `supabase_topics_migration.sql` dans
-  l'éditeur SQL Supabase avant le premier test.
+  **dans l'ordre** `supabase.sql`, puis `supabase_topics_migration.sql`, puis
+  `supabase_content_migration.sql` dans l'éditeur SQL Supabase avant le premier
+  test.
 - `SMTP_USER`, `SMTP_PASS` — mêmes identifiants Gmail que `portail-filme`
   (mot de passe d'application Google, voir `myaccount.google.com/apppasswords`).
 - `ADMIN_EMAILS` — reçoit l'alerte "session validée" ET seul(s) autorisé(s) à

@@ -2,8 +2,54 @@ import { useState } from 'react';
 import Head from 'next/head';
 import { getOpenSessions } from '../lib/sessions';
 import { getVisibleTopics, getAllTopics, CAPACITY, PRICE_LABEL, nextSaturdays, formatSaturday } from '../lib/topics';
+import { getSiteContent, CONTENT_DEFAULTS } from '../lib/content';
 import { getSession } from '../lib/auth';
 import AdminBar from '../components/AdminBar';
+
+// ─── Texte éditable en place (mode admin uniquement) ─────────────────────────
+function EditableText({ isAdmin, value, onSave, tag: Tag = 'span', multiline = false, className, style }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(value);
+  const [loading, setLoading] = useState(false);
+
+  if (!isAdmin) {
+    return <Tag className={className} style={style}>{value}</Tag>;
+  }
+
+  if (editing) {
+    return (
+      <span style={{ display: 'inline-flex', flexDirection: multiline ? 'column' : 'row', gap: 6, alignItems: multiline ? 'stretch' : 'center', width: multiline ? '100%' : 'auto', maxWidth: '100%' }}>
+        {multiline ? (
+          <textarea className="form-input" rows={3} value={draft} onChange={(e) => setDraft(e.target.value)} autoFocus />
+        ) : (
+          <input className="form-input" value={draft} onChange={(e) => setDraft(e.target.value)} autoFocus style={{ minWidth: 220 }} />
+        )}
+        <span style={{ display: 'flex', gap: 6 }}>
+          <button type="button" className="btn btn-ghost btn-sm" onClick={() => { setDraft(value); setEditing(false); }}>Annuler</button>
+          <button
+            type="button"
+            className="btn btn-primary btn-sm"
+            disabled={loading}
+            onClick={async () => {
+              setLoading(true);
+              await onSave(draft);
+              setLoading(false);
+              setEditing(false);
+            }}
+          >
+            {loading ? '…' : 'OK'}
+          </button>
+        </span>
+      </span>
+    );
+  }
+
+  return (
+    <Tag className={className} style={{ ...style, cursor: 'pointer' }} onClick={() => setEditing(true)} title="Cliquer pour éditer">
+      {value} <span style={{ fontSize: 11, opacity: 0.4 }}>✏️</span>
+    </Tag>
+  );
+}
 
 // ─── Carte formation — mode normal + mode édition admin ──────────────────────
 function TopicCard({ topic, index, isAdmin, onOpenRegister, onSaved }) {
@@ -176,9 +222,10 @@ function NewTopicCard({ onCreated }) {
   );
 }
 
-export default function Home({ initialSessions, initialTopics, isAdmin, admin }) {
+export default function Home({ initialSessions, initialTopics, initialContent, isAdmin, admin }) {
   const [sessions, setSessions] = useState(initialSessions);
   const [topics, setTopics] = useState(initialTopics);
+  const [content, setContent] = useState(initialContent);
   const [modal, setModal] = useState(null); // { topicId, dates: string[] }
   const [form, setForm] = useState({ name: '', email: '' });
   const [status, setStatus] = useState({ loading: false, error: '', results: [] });
@@ -191,6 +238,21 @@ export default function Home({ initialSessions, initialTopics, isAdmin, admin })
   }
   function addTopicToList(created) {
     setTopics((list) => [...list, created]);
+  }
+
+  async function saveContent(key, value) {
+    try {
+      const res = await fetch('/api/admin/content', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key, value }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Erreur');
+      setContent((c) => ({ ...c, [key]: data.value }));
+    } catch (err) {
+      alert(err.message || "Erreur lors de l'enregistrement");
+    }
   }
 
   function openModal(topicId, dateIso) {
@@ -275,23 +337,20 @@ export default function Home({ initialSessions, initialTopics, isAdmin, admin })
       <div className="page" style={isAdmin ? { paddingTop: 56 } : undefined}>
         <header className="hero">
           <img src="https://www.filme.fr/cdn/shop/files/Filme-Logo-sd.svg?v=1707646401&width=140" alt="Filme" className="logo" />
-          <h1>Les ateliers du samedi, avec le matériel que vous louez déjà.</h1>
-          <p className="lead">
-            Une journée 100% pratique (9h–18h) chez Filme à Montreuil, 6 participants maximum, pour prendre en main le
-            matériel avant votre prochain tournage.
-          </p>
+          <EditableText isAdmin={isAdmin} tag="h1" value={content.hero_title} onSave={(v) => saveContent('hero_title', v)} />
+          <EditableText isAdmin={isAdmin} tag="p" className="lead" multiline value={content.hero_lead} onSave={(v) => saveContent('hero_lead', v)} />
           <div className="pill-row">
             <span className="pill price">{PRICE_LABEL} / personne</span>
-            <span className="pill">6 places max par session</span>
-            <span className="pill">Réservé aux clients Filme</span>
-            <span className="pill">Validée dès 6 inscrits</span>
+            <EditableText isAdmin={isAdmin} tag="span" className="pill" value={content.pill_capacity} onSave={(v) => saveContent('pill_capacity', v)} />
+            <EditableText isAdmin={isAdmin} tag="span" className="pill" value={content.pill_audience} onSave={(v) => saveContent('pill_audience', v)} />
+            <EditableText isAdmin={isAdmin} tag="span" className="pill" value={content.pill_validation} onSave={(v) => saveContent('pill_validation', v)} />
           </div>
         </header>
 
         <section className="section">
           <div className="section-head">
-            <h2>Sessions ouvertes</h2>
-            <span className="hint">Triées de la plus remplie (la plus susceptible d'être programmée) à la moins remplie</span>
+            <EditableText isAdmin={isAdmin} tag="h2" value={content.sessions_heading} onSave={(v) => saveContent('sessions_heading', v)} />
+            <EditableText isAdmin={isAdmin} tag="span" className="hint" value={content.sessions_hint} onSave={(v) => saveContent('sessions_hint', v)} />
           </div>
           <div className="card">
             {sessions.length === 0 ? (
@@ -335,10 +394,8 @@ export default function Home({ initialSessions, initialTopics, isAdmin, admin })
 
         <section className="section">
           <div className="section-head">
-            <h2>Les formations</h2>
-            <span className="hint">
-              {isAdmin ? 'Mode admin — éditez, archivez ou créez une formation directement ici' : 'Choisissez une formation pour proposer ou rejoindre un ou plusieurs samedis'}
-            </span>
+            <EditableText isAdmin={isAdmin} tag="h2" value={content.topics_heading} onSave={(v) => saveContent('topics_heading', v)} />
+            <EditableText isAdmin={isAdmin} tag="span" className="hint" value={content.topics_hint} onSave={(v) => saveContent('topics_hint', v)} />
           </div>
           {topics.length === 0 && !isAdmin ? (
             <div className="card"><div className="empty">Aucune formation disponible pour le moment.</div></div>
@@ -353,7 +410,13 @@ export default function Home({ initialSessions, initialTopics, isAdmin, admin })
         </section>
 
         <footer className="page-footer">
-          Filme — Location de matériel audiovisuel · Montreuil · <a href="mailto:location@filme.fr">location@filme.fr</a>
+          <EditableText isAdmin={isAdmin} tag="span" value={content.footer_text} onSave={(v) => saveContent('footer_text', v)} />
+          {' · '}
+          {isAdmin ? (
+            <EditableText isAdmin={isAdmin} tag="span" value={content.footer_email} onSave={(v) => saveContent('footer_email', v)} />
+          ) : (
+            <a href={`mailto:${content.footer_email}`}>{content.footer_email}</a>
+          )}
         </footer>
       </div>
 
@@ -449,13 +512,14 @@ export async function getServerSideProps(ctx) {
   const isAdmin = !!session;
 
   try {
-    const [sessions, topics] = await Promise.all([
+    const [sessions, topics, content] = await Promise.all([
       getOpenSessions(),
       isAdmin ? getAllTopics() : getVisibleTopics(),
+      getSiteContent(),
     ]);
-    return { props: { initialSessions: sessions, initialTopics: topics, isAdmin, admin: session || null } };
+    return { props: { initialSessions: sessions, initialTopics: topics, initialContent: content, isAdmin, admin: session || null } };
   } catch (err) {
     console.error('[index] getServerSideProps', err);
-    return { props: { initialSessions: [], initialTopics: [], isAdmin, admin: session || null } };
+    return { props: { initialSessions: [], initialTopics: [], initialContent: CONTENT_DEFAULTS, isAdmin, admin: session || null } };
   }
 }
