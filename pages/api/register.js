@@ -1,21 +1,22 @@
 import { supabaseAdmin } from '../../lib/supabase';
 import { getCustomerByEmail } from '../../lib/booqable';
 import { sendWorkshopConfirmation, sendWorkshopValidated } from '../../lib/mailer';
-import { CAPACITY, topicById, isValidSaturday, formatSaturday } from '../../lib/topics';
+import { CAPACITY, getTopicById, isValidSaturday, formatSaturday } from '../../lib/topics';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Méthode non autorisée' });
 
   const { topicId, dateIso, name, email } = req.body || {};
 
-  const topic = topicById(topicId);
-  if (!topic) return res.status(400).json({ error: 'Formation inconnue' });
   if (!isValidSaturday(dateIso)) return res.status(400).json({ error: 'Merci de choisir un samedi à venir' });
   if (!name?.trim() || !email?.trim()) return res.status(400).json({ error: 'Nom et email requis' });
 
   const normalizedEmail = email.trim().toLowerCase();
 
   try {
+    const topic = await getTopicById(topicId);
+    if (!topic) return res.status(400).json({ error: 'Formation inconnue' });
+
     // ─── Vérification "client Filme" via Booqable (même lib que monespace.filme.fr) ───
     const customer = await getCustomerByEmail(normalizedEmail);
     if (!customer) return res.status(403).json({ error: 'no_account' });
@@ -28,6 +29,12 @@ export default async function handler(req, res) {
       .eq('session_date', dateIso)
       .maybeSingle();
     if (fetchErr) throw fetchErr;
+
+    // Une formation archivée ne peut plus ouvrir de nouvelle session, mais on
+    // n'annule pas les sessions déjà ouvertes avant son archivage.
+    if (!session && topic.archived) {
+      return res.status(400).json({ error: 'topic_archived' });
+    }
 
     if (!session) {
       const { data: created, error: createErr } = await supabaseAdmin

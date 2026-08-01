@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import Head from 'next/head';
 import { getOpenSessions } from '../lib/sessions';
-import { TOPICS, CAPACITY, PRICE_LABEL, nextSaturdays, formatSaturday } from '../lib/topics';
+import { getVisibleTopics, CAPACITY, PRICE_LABEL, nextSaturdays, formatSaturday } from '../lib/topics';
 
-export default function Home({ initialSessions }) {
+export default function Home({ initialSessions, topics }) {
   const [sessions, setSessions] = useState(initialSessions);
   const [modal, setModal] = useState(null); // { topicId, dates: string[] }
   const [form, setForm] = useState({ name: '', email: '' });
@@ -12,7 +12,7 @@ export default function Home({ initialSessions }) {
   const saturdays = nextSaturdays(8);
 
   function openModal(topicId, dateIso) {
-    setModal({ topicId: topicId || TOPICS[0].id, dates: dateIso ? [dateIso] : [] });
+    setModal({ topicId: topicId || topics[0]?.id, dates: dateIso ? [dateIso] : [] });
     setForm({ name: '', email: '' });
     setStatus({ loading: false, error: '', results: [] });
   }
@@ -77,6 +77,7 @@ export default function Home({ initialSessions }) {
     if (r.ok) return r.validated ? '🎉 Formation validée !' : `Confirmée (${CAPACITY - r.count} place(s) restante(s))`;
     if (r.error === 'full') return 'Session déjà complète';
     if (r.error === 'already_registered') return 'Déjà inscrit(e) sur cette session';
+    if (r.error === 'topic_archived') return "Cette formation n'est plus proposée";
     return 'Erreur, réessayez';
   }
 
@@ -150,20 +151,24 @@ export default function Home({ initialSessions }) {
 
         <section className="section">
           <div className="section-head">
-            <h2>Les 10 formations</h2>
+            <h2>Les formations</h2>
             <span className="hint">Choisissez une formation pour proposer ou rejoindre un ou plusieurs samedis</span>
           </div>
-          <div className="topics-grid">
-            {TOPICS.map((t, i) => (
-              <div className="card topic-card" key={t.id}>
-                <div className="idx">Formation {String(i + 1).padStart(2, '0')}</div>
-                <h3>{t.title}</h3>
-                <p>{t.desc}</p>
-                <div className="level">{t.level} · {PRICE_LABEL} · 1 journée (9h–18h)</div>
-                <button className="btn btn-primary btn-sm" onClick={() => openModal(t.id, null)}>Choisir un ou plusieurs samedis</button>
-              </div>
-            ))}
-          </div>
+          {topics.length === 0 ? (
+            <div className="card"><div className="empty">Aucune formation disponible pour le moment.</div></div>
+          ) : (
+            <div className="topics-grid">
+              {topics.map((t, i) => (
+                <div className="card topic-card" key={t.id}>
+                  <div className="idx">Formation {String(i + 1).padStart(2, '0')}</div>
+                  <h3>{t.title}</h3>
+                  <p>{t.desc}</p>
+                  <div className="level">{t.level} · {PRICE_LABEL} · 1 journée (9h–18h)</div>
+                  <button className="btn btn-primary btn-sm" onClick={() => openModal(t.id, null)}>Choisir un ou plusieurs samedis</button>
+                </div>
+              ))}
+            </div>
+          )}
         </section>
 
         <footer className="page-footer">
@@ -186,7 +191,7 @@ export default function Home({ initialSessions }) {
                   value={modal.topicId}
                   onChange={(e) => setModal({ ...modal, topicId: e.target.value })}
                 >
-                  {TOPICS.map((t) => (
+                  {topics.map((t) => (
                     <option key={t.id} value={t.id}>{t.title}</option>
                   ))}
                 </select>
@@ -260,10 +265,10 @@ export default function Home({ initialSessions }) {
 
 export async function getServerSideProps() {
   try {
-    const sessions = await getOpenSessions();
-    return { props: { initialSessions: sessions } };
+    const [sessions, topics] = await Promise.all([getOpenSessions(), getVisibleTopics()]);
+    return { props: { initialSessions: sessions, topics } };
   } catch (err) {
     console.error('[index] getServerSideProps', err);
-    return { props: { initialSessions: [] } };
+    return { props: { initialSessions: [], topics: [] } };
   }
 }
