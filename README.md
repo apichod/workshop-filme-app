@@ -48,7 +48,17 @@ façon d'envoyer des emails (`lib/mailer.js`, Gmail SMTP via nodemailer).
 - **Admin (`/admin`)** — connexion par lien magique (comme `monespace.filme.fr`),
   réservée aux emails listés dans `ADMIN_EMAILS`. Bandeau fixe en haut avec un
   champ pour rechercher un client par email (affiche son profil Booqable +
-  ses inscriptions aux workshops), et un lien vers `/admin/topics`.
+  ses inscriptions aux workshops), et un bouton "⚙️ Préférences" (voir
+  ci-dessous). Le lien direct vers `/admin/topics` a été retiré du bandeau
+  (l'édition des formations se fait désormais via la popup inline sur la
+  homepage), mais la page reste accessible directement si besoin.
+- **Préférences — samedis proposés** — popup accessible depuis le bandeau
+  admin, listant un an de samedis à venir groupés par mois. Décocher un
+  samedi (jour férié, congés, fermeture exceptionnelle…) l'exclut du
+  formulaire d'inscription ; `nextSaturdays()` (`lib/topics.js`) saute
+  automatiquement les dates fermées, et `pages/api/register.js` refuse
+  toute tentative d'inscription directe sur une date fermée. Stocké dans
+  `workshop_closed_dates` (`lib/closedDates.js`).
 - **Édition directement sur la homepage** — connecté en admin, `workshop.filme.fr`
   affiche le bandeau et devient éditable en place :
   - Chaque formation a un bouton ✏️ Éditer qui ouvre une **popup** avec les champs
@@ -93,8 +103,8 @@ Variables d'environnement (voir `.env.example`) :
   **dans l'ordre** `supabase.sql`, puis `supabase_topics_migration.sql`, puis
   `supabase_topics_fields_migration.sql`, puis
   `supabase_topics_category_bonus_migration.sql`, puis
-  `supabase_content_migration.sql` dans l'éditeur SQL Supabase avant le premier
-  test.
+  `supabase_content_migration.sql`, puis `supabase_closed_dates_migration.sql`
+  dans l'éditeur SQL Supabase avant le premier test.
 - `SMTP_USER`, `SMTP_PASS` — mêmes identifiants Gmail que `portail-filme`
   (mot de passe d'application Google, voir `myaccount.google.com/apppasswords`).
 - `ADMIN_EMAILS` — reçoit l'alerte "session validée" ET seul(s) autorisé(s) à

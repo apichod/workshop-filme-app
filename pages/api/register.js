@@ -2,6 +2,7 @@ import { supabaseAdmin } from '../../lib/supabase';
 import { getCustomerByEmail } from '../../lib/booqable';
 import { sendWorkshopConfirmation, sendWorkshopValidated } from '../../lib/mailer';
 import { CAPACITY, VALIDATION_THRESHOLD, getTopicById, isValidSaturday, formatSaturday } from '../../lib/topics';
+import { isDateClosed } from '../../lib/closedDates';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Méthode non autorisée' });
@@ -16,6 +17,9 @@ export default async function handler(req, res) {
   try {
     const topic = await getTopicById(topicId);
     if (!topic) return res.status(400).json({ error: 'Formation inconnue' });
+
+    // ─── Ce samedi a-t-il été fermé aux inscriptions (préférences admin) ? ───
+    if (await isDateClosed(dateIso)) return res.status(400).json({ error: 'date_closed' });
 
     // ─── Vérification "client Filme" via Booqable (même lib que monespace.filme.fr) ───
     const customer = await getCustomerByEmail(normalizedEmail);

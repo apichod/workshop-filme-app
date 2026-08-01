@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import Head from 'next/head';
 import { getOpenSessions } from '../lib/sessions';
-import { getVisibleTopics, getAllTopics, CAPACITY, VALIDATION_THRESHOLD, PRICE_LABEL, TOPIC_CATEGORIES, nextSaturdays, formatSaturday } from '../lib/topics';
+import { getVisibleTopics, getAllTopics, CAPACITY, VALIDATION_THRESHOLD, PRICE_LABEL, TOPIC_CATEGORIES, nextSaturdays, yearSaturdays, formatSaturday } from '../lib/topics';
 import { getSiteContent, CONTENT_DEFAULTS } from '../lib/content';
+import { getClosedDates } from '../lib/closedDates';
 import { getSession } from '../lib/auth';
 import AdminBar from '../components/AdminBar';
 
@@ -425,6 +426,93 @@ function TopicsJsonModal({ topics, onClose, onImported }) {
   );
 }
 
+// ─── Popup admin "Préférences" — samedis inclus/exclus sur un an ────────────
+function monthKey(dateIso) {
+  return dateIso.slice(0, 7); // "2026-08"
+}
+function monthLabel(dateIso) {
+  const d = new Date(`${dateIso}T00:00:00`);
+  const s = d.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+function dayLabel(dateIso) {
+  const d = new Date(`${dateIso}T00:00:00`);
+  return d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' });
+}
+
+function PreferencesModal({ closedDates, onToggle, onClose }) {
+  const [pending, setPending] = useState(null); // date en cours d'enregistrement
+  const [error, setError] = useState('');
+  const year = yearSaturdays(52);
+  const closedSet = new Set(closedDates);
+
+  const groups = [];
+  for (const dateIso of year) {
+    const key = monthKey(dateIso);
+    let group = groups.find((g) => g.key === key);
+    if (!group) { group = { key, label: monthLabel(dateIso), dates: [] }; groups.push(group); }
+    group.dates.push(dateIso);
+  }
+
+  async function toggle(dateIso, closed) {
+    setPending(dateIso);
+    setError('');
+    try {
+      await onToggle(dateIso, closed);
+    } catch (err) {
+      setError(err.message || 'Erreur');
+    } finally {
+      setPending(null);
+    }
+  }
+
+  return (
+    <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="modal" style={{ maxWidth: 620, maxHeight: '85vh', overflowY: 'auto' }}>
+        <button className="modal-close" onClick={onClose}>✕</button>
+        <h2>Préférences — samedis proposés</h2>
+        <p style={{ color: 'var(--text-muted)', fontSize: 13, marginTop: 8, marginBottom: 16 }}>
+          Décochez un samedi (congés, jour férié, fermeture exceptionnelle…) pour qu'il ne soit plus proposé
+          à l'inscription. Il n'apparaîtra plus dans le formulaire, et une éventuelle tentative d'inscription
+          directe sur cette date sera refusée.
+        </p>
+
+        {error && <div className="form-error">{error}</div>}
+
+        {groups.map((g) => (
+          <div key={g.key} style={{ marginBottom: 16 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', marginBottom: 8 }}>{g.label}</div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: 8 }}>
+              {g.dates.map((dateIso) => {
+                const closed = closedSet.has(dateIso);
+                return (
+                  <label
+                    key={dateIso}
+                    className="checkbox-item"
+                    style={{ opacity: pending === dateIso ? 0.5 : 1, textDecoration: closed ? 'line-through' : 'none', color: closed ? 'var(--text-muted)' : 'var(--text)' }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={!closed}
+                      disabled={pending === dateIso}
+                      onChange={(e) => toggle(dateIso, !e.target.checked)}
+                    />
+                    {dayLabel(dateIso)}
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+
+        <div className="modal-actions">
+          <button type="button" className="btn btn-primary" onClick={onClose}>Fermer</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Popup Conditions générales de participation ─────────────────────────────
 function TermsModal({ isAdmin, text, onSave, onClose }) {
   const [editing, setEditing] = useState(false);
@@ -474,7 +562,7 @@ function TermsModal({ isAdmin, text, onSave, onClose }) {
   );
 }
 
-export default function Home({ initialSessions, initialTopics, initialContent, isAdmin, admin }) {
+export default function Home({ initialSessions, initialTopics, initialContent, initialClosedDates, isAdmin, admin }) {
   const [sessions, setSessions] = useState(initialSessions);
   const [topics, setTopics] = useState(initialTopics);
   const [content, setContent] = useState(initialContent);
@@ -483,9 +571,11 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
   const [status, setStatus] = useState({ loading: false, error: '', results: [] });
   const [showTerms, setShowTerms] = useState(false);
   const [showTopicsJson, setShowTopicsJson] = useState(false);
+  const [showPreferences, setShowPreferences] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState('');
+  const [closedDates, setClosedDates] = useState(initialClosedDates || []);
 
-  const saturdays = nextSaturdays(8);
+  const saturdays = nextSaturdays(8, closedDates);
   const selectableTopics = topics.filter((t) => !t.archived);
   const usedCategories = TOPIC_CATEGORIES.filter((c) => topics.some((t) => t.category === c));
   const filteredTopics = categoryFilter ? topics.filter((t) => t.category === categoryFilter) : topics;
@@ -510,6 +600,17 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
     } catch (err) {
       alert(err.message || "Erreur lors de l'enregistrement");
     }
+  }
+
+  async function toggleClosedDate(dateIso, closed) {
+    const res = await fetch('/api/admin/closed-dates', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ date: dateIso, closed }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Erreur');
+    setClosedDates((list) => (closed ? [...new Set([...list, dateIso])] : list.filter((d) => d !== dateIso)));
   }
 
   function openModal(topicId, dateIso) {
@@ -579,6 +680,7 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
     if (r.error === 'full') return 'Session déjà complète';
     if (r.error === 'already_registered') return 'Déjà inscrit(e) sur cette session';
     if (r.error === 'topic_archived') return "Cette formation n'est plus proposée";
+    if (r.error === 'date_closed') return "Ce samedi n'est pas disponible";
     return 'Erreur, réessayez';
   }
 
@@ -589,7 +691,7 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
         <meta name="description" content={`Ateliers pratiques du samedi chez Filme : prise en main du matériel de location, 149 € HT, ${CAPACITY} places maximum.`} />
       </Head>
 
-      {isAdmin && <AdminBar email={admin.email} />}
+      {isAdmin && <AdminBar email={admin.email} onOpenPreferences={() => setShowPreferences(true)} />}
 
       <div className="page" style={isAdmin ? { paddingTop: 56 } : undefined}>
         <header className="hero">
@@ -842,6 +944,14 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
           onImported={(list) => setTopics(list)}
         />
       )}
+
+      {showPreferences && (
+        <PreferencesModal
+          closedDates={closedDates}
+          onToggle={toggleClosedDate}
+          onClose={() => setShowPreferences(false)}
+        />
+      )}
     </>
   );
 }
@@ -851,14 +961,33 @@ export async function getServerSideProps(ctx) {
   const isAdmin = !!session;
 
   try {
-    const [sessions, topics, content] = await Promise.all([
+    const [sessions, topics, content, closedDates] = await Promise.all([
       getOpenSessions(),
       isAdmin ? getAllTopics() : getVisibleTopics(),
       getSiteContent(),
+      getClosedDates(),
     ]);
-    return { props: { initialSessions: sessions, initialTopics: topics, initialContent: content, isAdmin, admin: session || null } };
+    return {
+      props: {
+        initialSessions: sessions,
+        initialTopics: topics,
+        initialContent: content,
+        initialClosedDates: closedDates,
+        isAdmin,
+        admin: session || null,
+      },
+    };
   } catch (err) {
     console.error('[index] getServerSideProps', err);
-    return { props: { initialSessions: [], initialTopics: [], initialContent: CONTENT_DEFAULTS, isAdmin, admin: session || null } };
+    return {
+      props: {
+        initialSessions: [],
+        initialTopics: [],
+        initialContent: CONTENT_DEFAULTS,
+        initialClosedDates: [],
+        isAdmin,
+        admin: session || null,
+      },
+    };
   }
 }
