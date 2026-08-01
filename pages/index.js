@@ -5,18 +5,25 @@ import { TOPICS, CAPACITY, PRICE_LABEL, nextSaturdays, formatSaturday } from '..
 
 export default function Home({ initialSessions }) {
   const [sessions, setSessions] = useState(initialSessions);
-  const [modal, setModal] = useState(null); // { topicId, dateIso }
+  const [modal, setModal] = useState(null); // { topicId, dates: string[] }
   const [form, setForm] = useState({ name: '', email: '' });
-  const [status, setStatus] = useState({ loading: false, error: '', ok: '' });
+  const [status, setStatus] = useState({ loading: false, error: '', results: [] });
 
   const saturdays = nextSaturdays(8);
 
   function openModal(topicId, dateIso) {
-    setModal({ topicId: topicId || TOPICS[0].id, dateIso: dateIso || saturdays[0] });
+    setModal({ topicId: topicId || TOPICS[0].id, dates: dateIso ? [dateIso] : [] });
     setForm({ name: '', email: '' });
-    setStatus({ loading: false, error: '', ok: '' });
+    setStatus({ loading: false, error: '', results: [] });
   }
   function closeModal() { setModal(null); }
+
+  function toggleDate(dateIso) {
+    setModal((m) => ({
+      ...m,
+      dates: m.dates.includes(dateIso) ? m.dates.filter((d) => d !== dateIso) : [...m.dates, dateIso].sort(),
+    }));
+  }
 
   async function refreshSessions() {
     const res = await fetch('/api/sessions', { cache: 'no-store' });
@@ -26,40 +33,51 @@ export default function Home({ initialSessions }) {
 
   async function submit(e) {
     e.preventDefault();
-    setStatus({ loading: true, error: '', ok: '' });
-    try {
-      const res = await fetch('/api/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ topicId: modal.topicId, dateIso: modal.dateIso, name: form.name, email: form.email }),
-      });
-      const data = await res.json();
 
-      if (!res.ok) {
-        const msg =
-          data.error === 'no_account'
-            ? "Cet email ne correspond à aucun client Filme connu. Vérifiez l'adresse utilisée pour vos locations, ou contactez-nous."
-            : data.error === 'full'
-            ? 'Cette session est déjà complète. Choisissez un autre samedi.'
-            : data.error === 'already_registered'
-            ? 'Cet email est déjà inscrit sur cette session.'
-            : data.error || 'Erreur, réessayez.';
-        setStatus({ loading: false, error: msg, ok: '' });
-        return;
+    if (!modal.dates.length) {
+      setStatus({ loading: false, error: 'Sélectionnez au moins un samedi.', results: [] });
+      return;
+    }
+
+    setStatus({ loading: true, error: '', results: [] });
+
+    // Une requête par samedi sélectionné — même formation, même personne.
+    const results = [];
+    for (const dateIso of modal.dates) {
+      try {
+        const res = await fetch('/api/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ topicId: modal.topicId, dateIso, name: form.name, email: form.email }),
+        });
+        const data = await res.json();
+        results.push({ dateIso, ok: res.ok, error: data.error, validated: data.validated, count: data.count });
+        // Email non reconnu : inutile d'essayer les autres dates, ça échouera pareil.
+        if (!res.ok && data.error === 'no_account') break;
+      } catch {
+        results.push({ dateIso, ok: false, error: 'network' });
       }
+    }
 
+    if (results.some((r) => r.error === 'no_account')) {
       setStatus({
         loading: false,
-        error: '',
-        ok: data.validated
-          ? "🎉 Inscription confirmée — la session vient d'atteindre 6 participants, la formation est validée !"
-          : `Inscription confirmée. ${CAPACITY - data.count} place(s) restante(s) sur cette session.`,
+        error: "Cet email ne correspond à aucun client Filme connu. Vérifiez l'adresse utilisée pour vos locations, ou contactez-nous.",
+        results: [],
       });
-      await refreshSessions();
-      setTimeout(closeModal, data.validated ? 2600 : 1600);
-    } catch {
-      setStatus({ loading: false, error: 'Erreur réseau, réessayez.', ok: '' });
+      return;
     }
+
+    setStatus({ loading: false, error: '', results });
+    await refreshSessions();
+    if (results.every((r) => r.ok)) setTimeout(closeModal, 2200);
+  }
+
+  function resultLabel(r) {
+    if (r.ok) return r.validated ? '🎉 Formation validée !' : `Confirmée (${CAPACITY - r.count} place(s) restante(s))`;
+    if (r.error === 'full') return 'Session déjà complète';
+    if (r.error === 'already_registered') return 'Déjà inscrit(e) sur cette session';
+    return 'Erreur, réessayez';
   }
 
   return (
@@ -133,7 +151,7 @@ export default function Home({ initialSessions }) {
         <section className="section">
           <div className="section-head">
             <h2>Les 10 formations</h2>
-            <span className="hint">Choisissez une formation pour proposer ou rejoindre un samedi</span>
+            <span className="hint">Choisissez une formation pour proposer ou rejoindre un ou plusieurs samedis</span>
           </div>
           <div className="topics-grid">
             {TOPICS.map((t, i) => (
@@ -142,7 +160,7 @@ export default function Home({ initialSessions }) {
                 <h3>{t.title}</h3>
                 <p>{t.desc}</p>
                 <div className="level">{t.level} · {PRICE_LABEL} · 1 journée (9h–18h)</div>
-                <button className="btn btn-primary btn-sm" onClick={() => openModal(t.id, null)}>Choisir un samedi</button>
+                <button className="btn btn-primary btn-sm" onClick={() => openModal(t.id, null)}>Choisir un ou plusieurs samedis</button>
               </div>
             ))}
           </div>
@@ -158,7 +176,7 @@ export default function Home({ initialSessions }) {
           <div className="modal">
             <button className="modal-close" onClick={closeModal}>✕</button>
             <h2>S'inscrire à un workshop</h2>
-            <div className="modal-sub">{PRICE_LABEL} — 6 places maximum</div>
+            <div className="modal-sub">{PRICE_LABEL} — 6 places maximum · vous pouvez cocher plusieurs samedis pour la même formation</div>
 
             <form onSubmit={submit}>
               <div className="form-group">
@@ -175,16 +193,19 @@ export default function Home({ initialSessions }) {
               </div>
 
               <div className="form-group">
-                <label className="form-label">Samedi</label>
-                <select
-                  className="form-input"
-                  value={modal.dateIso}
-                  onChange={(e) => setModal({ ...modal, dateIso: e.target.value })}
-                >
+                <label className="form-label">Samedis ({modal.dates.length} sélectionné{modal.dates.length > 1 ? 's' : ''})</label>
+                <div className="checkbox-list">
                   {saturdays.map((d) => (
-                    <option key={d} value={d}>{formatSaturday(d)}</option>
+                    <label className="checkbox-item" key={d}>
+                      <input
+                        type="checkbox"
+                        checked={modal.dates.includes(d)}
+                        onChange={() => toggleDate(d)}
+                      />
+                      {formatSaturday(d)}
+                    </label>
                   ))}
-                </select>
+                </div>
               </div>
 
               <div className="form-group">
@@ -212,12 +233,21 @@ export default function Home({ initialSessions }) {
               </div>
 
               {status.error && <div className="form-error">{status.error}</div>}
-              {status.ok && <div className="form-success">{status.ok}</div>}
+
+              {status.results.length > 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 12 }}>
+                  {status.results.map((r) => (
+                    <div key={r.dateIso} className={r.ok ? 'form-success' : 'form-error'} style={{ marginTop: 0 }}>
+                      {formatSaturday(r.dateIso)} — {resultLabel(r)}
+                    </div>
+                  ))}
+                </div>
+              )}
 
               <div className="modal-actions">
                 <button type="button" className="btn btn-ghost" onClick={closeModal}>Annuler</button>
                 <button type="submit" className="btn btn-primary" disabled={status.loading}>
-                  {status.loading ? 'Vérification client Filme…' : "Confirmer l'inscription"}
+                  {status.loading ? 'Vérification client Filme…' : `Confirmer l'inscription${modal.dates.length > 1 ? ` (${modal.dates.length} samedis)` : ''}`}
                 </button>
               </div>
             </form>

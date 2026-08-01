@@ -94,6 +94,27 @@ a { color: var(--accent); }
   width: 100%;
 }
 .form-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(43, 128, 255, 0.12); }
+
+.checkbox-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 220px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 6px 10px;
+}
+.checkbox-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 4px;
+  font-size: 14px;
+  color: var(--text);
+  cursor: pointer;
+}
+.checkbox-item input[type="checkbox"] { width: auto; accent-color: var(--accent); cursor: pointer; }
 .form-error {
   background: rgba(245, 54, 105, 0.08);
   border: 1px solid rgba(245, 54, 105, 0.25);
