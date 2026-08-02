@@ -1085,13 +1085,34 @@ function emptyFormateurForm(f) {
   };
 }
 
-function FormateurForm({ formateur, onCancel, onSaved }) {
+function FormateurForm({ formateur, onCancel, onSaved, topics, onTopicUpdated }) {
   const [form, setForm] = useState(emptyFormateurForm(formateur));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [topicSavingId, setTopicSavingId] = useState(null);
+  const [topicError, setTopicError] = useState('');
 
   function set(field, value) {
     setForm((f) => ({ ...f, [field]: value }));
+  }
+
+  async function toggleTopicAssignment(topic, checked) {
+    setTopicSavingId(topic.id);
+    setTopicError('');
+    try {
+      const res = await fetch(`/api/admin/topics/${topic.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ formateurId: checked ? formateur.id : null }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Erreur');
+      onTopicUpdated?.(data.topic);
+    } catch (err) {
+      setTopicError(err.message || 'Erreur');
+    } finally {
+      setTopicSavingId(null);
+    }
   }
 
   async function submit(e) {
@@ -1145,6 +1166,35 @@ function FormateurForm({ formateur, onCancel, onSaved }) {
           <input className="form-input" value={form.photoUrl} onChange={(e) => set('photoUrl', e.target.value)} placeholder="https://…" />
         </div>
       </div>
+
+      {formateur ? (
+        <div className="form-group">
+          <label className="form-label">Formations assignées</label>
+          {topicError && <div className="form-error">{topicError}</div>}
+          {!topics || topics.length === 0 ? (
+            <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>Aucune formation pour le moment.</div>
+          ) : (
+            <div className="checkbox-list">
+              {topics.map((t) => (
+                <label className={`checkbox-item ${topicSavingId === t.id ? 'checkbox-item-disabled' : ''}`} key={t.id}>
+                  <input
+                    type="checkbox"
+                    checked={t.formateurId === formateur.id}
+                    disabled={topicSavingId === t.id}
+                    onChange={(e) => toggleTopicAssignment(t, e.target.checked)}
+                  />
+                  {t.title}{t.archived ? ' (archivée)' : ''}
+                </label>
+              ))}
+            </div>
+          )}
+        </div>
+      ) : (
+        <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 12 }}>
+          L'assignation des formations sera possible une fois le formateur créé.
+        </div>
+      )}
+
       <div className="modal-actions" style={{ marginTop: 8 }}>
         <button type="button" className="btn btn-ghost" onClick={onCancel}>Annuler</button>
         <button type="submit" className="btn btn-primary" disabled={loading}>
@@ -1157,7 +1207,7 @@ function FormateurForm({ formateur, onCancel, onSaved }) {
 
 // Popup d'édition d'un formateur depuis sa carte homepage (réutilise
 // FormateurForm, déjà utilisé "en ligne" dans Préférences → Formateurs).
-function FormateurFormModal({ formateur, onClose, onSaved }) {
+function FormateurFormModal({ formateur, onClose, onSaved, topics, onTopicUpdated }) {
   return (
     <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className="modal" style={{ maxWidth: 560, maxHeight: '85vh', overflowY: 'auto' }}>
@@ -1168,6 +1218,8 @@ function FormateurFormModal({ formateur, onClose, onSaved }) {
             formateur={formateur}
             onCancel={onClose}
             onSaved={(f) => { onSaved(f); onClose(); }}
+            topics={topics}
+            onTopicUpdated={onTopicUpdated}
           />
         </div>
       </div>
@@ -1355,7 +1407,7 @@ function FormateurDetailModal({ formateur, isAdmin, onClose, onSaved }) {
 
 // Carte formateur — section publique "Nos formateurs". Toujours "En savoir
 // plus" ; en admin, également Éditer / Archiver (même logique que TopicCard).
-function FormateurCard({ formateur, isAdmin, onSaved }) {
+function FormateurCard({ formateur, isAdmin, onSaved, topics, onTopicUpdated }) {
   const [showDetail, setShowDetail] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
   const [archiving, setArchiving] = useState(false);
@@ -1412,12 +1464,20 @@ function FormateurCard({ formateur, isAdmin, onSaved }) {
       </div>
 
       {showDetail && <FormateurDetailModal formateur={formateur} isAdmin={isAdmin} onClose={() => setShowDetail(false)} onSaved={onSaved} />}
-      {showEdit && <FormateurFormModal formateur={formateur} onClose={() => setShowEdit(false)} onSaved={onSaved} />}
+      {showEdit && (
+        <FormateurFormModal
+          formateur={formateur}
+          onClose={() => setShowEdit(false)}
+          onSaved={onSaved}
+          topics={topics}
+          onTopicUpdated={onTopicUpdated}
+        />
+      )}
     </div>
   );
 }
 
-function FormateursPreferences({ formateurs, onCreated, onUpdated, onDeleted }) {
+function FormateursPreferences({ formateurs, onCreated, onUpdated, onDeleted, topics, onTopicUpdated }) {
   const [showAdd, setShowAdd] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
@@ -1469,6 +1529,8 @@ function FormateursPreferences({ formateurs, onCreated, onUpdated, onDeleted }) 
               formateur={f}
               onCancel={() => setEditingId(null)}
               onSaved={(updated) => { onUpdated(updated); setEditingId(null); }}
+              topics={topics}
+              onTopicUpdated={onTopicUpdated}
             />
           ) : (
             <div
@@ -1499,7 +1561,7 @@ function FormateursPreferences({ formateurs, onCreated, onUpdated, onDeleted }) 
   );
 }
 
-function PreferencesModal({ closedDates, onToggle, onSessionsChanged, topics, onTopicDeleted, formateurs, onFormateurCreated, onFormateurUpdated, onFormateurDeleted, onClose }) {
+function PreferencesModal({ closedDates, onToggle, onSessionsChanged, topics, onTopicDeleted, onTopicUpdated, formateurs, onFormateurCreated, onFormateurUpdated, onFormateurDeleted, onClose }) {
   const [tab, setTab] = useState('samedis');
 
   return (
@@ -1524,6 +1586,8 @@ function PreferencesModal({ closedDates, onToggle, onSessionsChanged, topics, on
             onCreated={onFormateurCreated}
             onUpdated={onFormateurUpdated}
             onDeleted={onFormateurDeleted}
+            topics={topics}
+            onTopicUpdated={onTopicUpdated}
           />
         )}
 
@@ -2134,7 +2198,7 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
             </div>
             <div className="formateurs-grid">
               {formateurs.map((f) => (
-                <FormateurCard key={f.id} formateur={f} isAdmin={isAdmin} onSaved={updateFormateurInList} />
+                <FormateurCard key={f.id} formateur={f} isAdmin={isAdmin} onSaved={updateFormateurInList} topics={topics} onTopicUpdated={updateTopicInList} />
               ))}
             </div>
           </section>
@@ -2313,6 +2377,7 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
           onSessionsChanged={refreshSessions}
           topics={topics}
           onTopicDeleted={removeTopicFromList}
+          onTopicUpdated={updateTopicInList}
           formateurs={formateurs}
           onFormateurCreated={addFormateurToList}
           onFormateurUpdated={updateFormateurInList}
