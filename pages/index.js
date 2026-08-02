@@ -1331,7 +1331,7 @@ function AvailabilityEditor({ value, onChange }) {
               type="button"
               onClick={() => setAgendaView('liste')}
               title="Vue liste"
-              style={{ display: 'flex', alignItems: 'center', border: 'none', borderRadius: 4, padding: '4px 6px', cursor: 'pointer', background: agendaView === 'liste' ? '#e8ab5c' : 'transparent', color: agendaView === 'liste' ? '#fff' : 'var(--text-muted)' }}
+              style={{ display: 'flex', alignItems: 'center', border: 'none', borderRadius: 4, padding: '4px 6px', cursor: 'pointer', background: agendaView === 'liste' ? 'var(--text)' : 'transparent', color: agendaView === 'liste' ? '#fff' : 'var(--text-muted)' }}
             >
               <Icon name="list" size={14} />
             </button>
@@ -1339,7 +1339,7 @@ function AvailabilityEditor({ value, onChange }) {
               type="button"
               onClick={() => setAgendaView('calendrier')}
               title="Vue calendrier"
-              style={{ display: 'flex', alignItems: 'center', border: 'none', borderRadius: 4, padding: '4px 6px', cursor: 'pointer', background: agendaView === 'calendrier' ? '#e8ab5c' : 'transparent', color: agendaView === 'calendrier' ? '#fff' : 'var(--text-muted)' }}
+              style={{ display: 'flex', alignItems: 'center', border: 'none', borderRadius: 4, padding: '4px 6px', cursor: 'pointer', background: agendaView === 'calendrier' ? 'var(--text)' : 'transparent', color: agendaView === 'calendrier' ? '#fff' : 'var(--text-muted)' }}
             >
               <Icon name="calendar" size={14} />
             </button>
@@ -2491,7 +2491,7 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
           </div>
           {sessions.length > 0 && (
             <div className="filter-sort-row">
-              {usedSessionTypes.length > 1 && (
+              {sessionsView === 'liste' && usedSessionTypes.length > 1 && (
                 <div className="filter-row">
                   <span className="sort-label">Filtrer par :</span>
                   <SessionTypeFilter
@@ -2503,22 +2503,24 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
                 </div>
               )}
               <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 16 }}>
-                <div className="sort-row">
-                  <span className="sort-label">Trier par :</span>
-                  <div className="sort-select-wrap">
-                    <select className="sort-select" value={sessionSort} onChange={(e) => setSessionSort(e.target.value)}>
-                      <option value="rate">Taux de remplissage</option>
-                      <option value="date">Date</option>
-                    </select>
-                    <Icon name="chevronDown" size={14} />
+                {sessionsView === 'liste' && (
+                  <div className="sort-row">
+                    <span className="sort-label">Trier par :</span>
+                    <div className="sort-select-wrap">
+                      <select className="sort-select" value={sessionSort} onChange={(e) => setSessionSort(e.target.value)}>
+                        <option value="rate">Taux de remplissage</option>
+                        <option value="date">Date</option>
+                      </select>
+                      <Icon name="chevronDown" size={14} />
+                    </div>
                   </div>
-                </div>
+                )}
                 <div style={{ display: 'flex', gap: 2, border: '1px solid var(--border)', borderRadius: 6, padding: 2 }}>
                   <button
                     type="button"
                     onClick={() => setSessionsView('liste')}
                     title="Vue liste"
-                    style={{ display: 'flex', alignItems: 'center', border: 'none', borderRadius: 4, padding: '5px 7px', cursor: 'pointer', background: sessionsView === 'liste' ? '#e8ab5c' : 'transparent', color: sessionsView === 'liste' ? '#fff' : 'var(--text-muted)' }}
+                    style={{ display: 'flex', alignItems: 'center', border: 'none', borderRadius: 4, padding: '5px 7px', cursor: 'pointer', background: sessionsView === 'liste' ? 'var(--text)' : 'transparent', color: sessionsView === 'liste' ? '#fff' : 'var(--text-muted)' }}
                   >
                     <Icon name="list" size={14} />
                   </button>
@@ -2526,7 +2528,7 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
                     type="button"
                     onClick={() => setSessionsView('calendrier')}
                     title="Vue calendrier"
-                    style={{ display: 'flex', alignItems: 'center', border: 'none', borderRadius: 4, padding: '5px 7px', cursor: 'pointer', background: sessionsView === 'calendrier' ? '#e8ab5c' : 'transparent', color: sessionsView === 'calendrier' ? '#fff' : 'var(--text-muted)' }}
+                    style={{ display: 'flex', alignItems: 'center', border: 'none', borderRadius: 4, padding: '5px 7px', cursor: 'pointer', background: sessionsView === 'calendrier' ? 'var(--text)' : 'transparent', color: sessionsView === 'calendrier' ? '#fff' : 'var(--text-muted)' }}
                   >
                     <Icon name="calendar" size={14} />
                   </button>
