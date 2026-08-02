@@ -314,10 +314,6 @@ h1, h2, h3, .section-head h2, .topic-card h3 { font-family: var(--font-heading-f
 .stat-item strong { display: block; font-size: 14px; font-weight: 600; color: #fff; }
 .stat-item span { display: block; font-size: 12.5px; color: rgba(255, 255, 255, 0.55); }
 
-/* ─── Bannières Hero n°2/3 (meetups, démos produits...) ────────────────────── */
-.hero-bullets { display: flex; flex-direction: column; gap: 10px; list-style: none; padding: 0; margin: 0; }
-.hero-bullets li { display: flex; align-items: center; gap: 10px; color: rgba(255, 255, 255, 0.85); font-size: 14px; }
-
 /* Sélecteur d'icône (admin) — cliquer l'icône ouvre une petite grille de choix */
 .icon-picker { position: relative; }
 .icon-picker-trigger {

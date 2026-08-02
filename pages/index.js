@@ -62,24 +62,31 @@ function BulletIconPicker({ isAdmin, icon, onChange }) {
   );
 }
 
+// ─── Ligne de pastilles icône + texte, en ligne (réutilisée par les 3 bannières) ───
+function HeroPillRow({ isAdmin, content, saveContent, items }) {
+  return (
+    <div className="hero-stats">
+      {items.map(({ textKey, iconKey, defaultIcon }) => (
+        <div className="stat-item" key={textKey}>
+          <BulletIconPicker
+            isAdmin={isAdmin}
+            icon={content[iconKey] || defaultIcon}
+            onChange={(name) => saveContent(iconKey, name)}
+          />
+          <EditableText isAdmin={isAdmin} tag="strong" value={content[textKey]} onSave={(v) => saveContent(textKey, v)} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // ─── Bannière Hero n°2/3 — titre + texte + liste à puces, éditables ──────────
 function HeroInfoSlide({ isAdmin, content, saveContent, titleKey, leadKey, bullets }) {
   return (
     <div className="hero-copy">
       <EditableText isAdmin={isAdmin} tag="h1" value={content[titleKey]} onSave={(v) => saveContent(titleKey, v)} />
       <EditableText isAdmin={isAdmin} tag="p" className="lead" multiline value={content[leadKey]} onSave={(v) => saveContent(leadKey, v)} />
-      <ul className="hero-bullets">
-        {bullets.map(({ textKey, iconKey, defaultIcon }) => (
-          <li key={textKey}>
-            <BulletIconPicker
-              isAdmin={isAdmin}
-              icon={content[iconKey] || defaultIcon}
-              onChange={(name) => saveContent(iconKey, name)}
-            />
-            <EditableText isAdmin={isAdmin} tag="span" value={content[textKey]} onSave={(v) => saveContent(textKey, v)} />
-          </li>
-        ))}
-      </ul>
+      <HeroPillRow isAdmin={isAdmin} content={content} saveContent={saveContent} items={bullets} />
     </div>
   );
 }
@@ -1391,24 +1398,17 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
             <div className="hero-copy">
               <EditableText isAdmin={isAdmin} tag="h1" value={content.hero_title} onSave={(v) => saveContent('hero_title', v)} />
               <EditableText isAdmin={isAdmin} tag="p" className="lead" multiline value={content.hero_lead} onSave={(v) => saveContent('hero_lead', v)} />
-              <div className="hero-stats">
-                <div className="stat-item">
-                  <span className="icon-wrap"><Icon name="price" /></span>
-                  <EditableText isAdmin={isAdmin} tag="strong" value={content.price_label} onSave={(v) => saveContent('price_label', v)} />
-                </div>
-                <div className="stat-item">
-                  <span className="icon-wrap"><Icon name="users" /></span>
-                  <EditableText isAdmin={isAdmin} tag="strong" value={content.pill_capacity} onSave={(v) => saveContent('pill_capacity', v)} />
-                </div>
-                <div className="stat-item">
-                  <span className="icon-wrap"><Icon name="check" /></span>
-                  <EditableText isAdmin={isAdmin} tag="strong" value={content.pill_validation} onSave={(v) => saveContent('pill_validation', v)} />
-                </div>
-                <div className="stat-item">
-                  <span className="icon-wrap"><Icon name="shield" /></span>
-                  <EditableText isAdmin={isAdmin} tag="strong" value={content.pill_audience} onSave={(v) => saveContent('pill_audience', v)} />
-                </div>
-              </div>
+              <HeroPillRow
+                isAdmin={isAdmin}
+                content={content}
+                saveContent={saveContent}
+                items={[
+                  { textKey: 'price_label', iconKey: 'price_label_icon', defaultIcon: 'price' },
+                  { textKey: 'pill_capacity', iconKey: 'pill_capacity_icon', defaultIcon: 'users' },
+                  { textKey: 'pill_validation', iconKey: 'pill_validation_icon', defaultIcon: 'check' },
+                  { textKey: 'pill_audience', iconKey: 'pill_audience_icon', defaultIcon: 'shield' },
+                ]}
+              />
             </div>
           )}
           {heroSlide === 1 && (
