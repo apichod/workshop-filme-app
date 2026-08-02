@@ -1554,19 +1554,9 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
           <div className="modal">
             <button className="modal-close" onClick={closeModal}>✕</button>
             <h2>S'inscrire à un événement</h2>
-            <div className="modal-sub">
-              {formatPrice(modalTopic?.price)} — {modalTopic?.maxParticipants || CAPACITY} places maximum
-              {!modalTopic?.fixedDate && (
-                <>
-                  <br />
-                  Dates flexibles : choisis tes dispos pour cette formation et si une date atteint le minimum d'inscriptions requises elle sera confirmée.
-                </>
-              )}
-            </div>
 
             <form onSubmit={submit}>
               <div className="form-group">
-                <label className="form-label">Formation</label>
                 <select
                   className="form-input"
                   value={modal.topicId}
@@ -1585,6 +1575,17 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
                   >
                     <Icon name="info" size={13} /> En savoir plus sur cet événement
                   </button>
+                )}
+                {modalTopic && (
+                  <div className="modal-sub" style={{ marginTop: 6 }}>
+                    {modalTopic.type || 'Formation'} · {formatPrice(modalTopic.price)} · {modalTopic.maxParticipants || CAPACITY} places maximum
+                    {!modalTopic.fixedDate && (
+                      <>
+                        <br />
+                        Dates flexibles : choisis tes dispos pour cette formation et si une date atteint le minimum d'inscriptions requises elle sera confirmée.
+                      </>
+                    )}
+                  </div>
                 )}
               </div>
 
