@@ -2790,16 +2790,6 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
                 </div>
               ))}
             </div>
-            <div className="engagement-note">
-              <span className="en-icon"><Icon name="info" size={18} /></span>
-              <p>
-                <EditableText isAdmin={isAdmin} tag="span" multiline value={content.engagement_note} onSave={(v) => saveContent('engagement_note', v)} />
-                {' '}
-                <button type="button" className="link-btn" onClick={() => setShowTerms(true)}>
-                  Voir les conditions générales <Icon name="arrowRight" size={14} />
-                </button>
-              </p>
-            </div>
           </div>
         </section>
 
@@ -3044,10 +3034,18 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
                 </div>
               )}
 
+              <p style={{ fontSize: 12.5, color: 'var(--text-muted)', marginTop: 4, marginBottom: 0, lineHeight: 1.5 }}>
+                <EditableText isAdmin={isAdmin} tag="span" multiline value={content.engagement_note} onSave={(v) => saveContent('engagement_note', v)} />
+                {' '}
+                <button type="button" className="link-btn" onClick={() => setShowTerms(true)} style={{ fontSize: 12.5 }}>
+                  Voir les conditions générales <Icon name="arrowRight" size={12} />
+                </button>
+              </p>
+
               <div className="modal-actions">
                 <button type="button" className="btn btn-ghost" onClick={closeModal}>Annuler</button>
                 <button type="submit" className="btn btn-primary" disabled={status.loading}>
-                  {status.loading ? 'Vérification client Filme…' : `Confirmer l'inscription${modal.dates.length > 1 ? ` (${modal.dates.length} samedis)` : ''}`}
+                  {status.loading ? 'Vérification client Filme…' : `S'inscrire${modal.dates.length > 1 ? ` (${modal.dates.length} samedis)` : ''}`}
                 </button>
               </div>
             </form>
