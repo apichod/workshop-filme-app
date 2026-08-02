@@ -1274,6 +1274,21 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
     return 'Erreur, réessayez';
   }
 
+  // Pour chaque date proposée dans le modal d'inscription : nombre d'inscrits
+  // déjà connus pour cette formation à cette date, et statut (validée ou non).
+  // Une date sans session existante n'a simplement encore aucun inscrit.
+  function dateStatusLabel(dateIso) {
+    if (!modalTopic) return '';
+    const capacity = modalTopic.maxParticipants || CAPACITY;
+    const threshold = Number.isFinite(modalTopic.minParticipants) ? modalTopic.minParticipants : VALIDATION_THRESHOLD;
+    const session = sessions.find((s) => s.topicId === modalTopic.id && s.dateIso === dateIso);
+    const count = session?.count || 0;
+    const validated = !!session?.validated;
+    return validated
+      ? `${count}/${capacity} (Confirmé, reste ${Math.max(0, capacity - count)})`
+      : `${count}/${capacity} (Non confirmé, manque ${Math.max(0, threshold - count)})`;
+  }
+
   return (
     <>
       <Head>
@@ -1560,7 +1575,7 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
                   <button
                     type="button"
                     className="link-btn"
-                    style={{ marginTop: 6 }}
+                    style={{ marginTop: 6, alignSelf: 'flex-start', textAlign: 'left' }}
                     onClick={() => setShowModalTopicDetail(true)}
                   >
                     En savoir plus
@@ -1572,7 +1587,10 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
                 <div className="form-group">
                   <label className="form-label">Date</label>
                   <div className="checkbox-list">
-                    <div className="checkbox-item">Le {formatSaturday(modalTopic.fixedDate)} — date fixe, non modifiable</div>
+                    <div className="checkbox-item">
+                      Le {formatSaturday(modalTopic.fixedDate)} — date fixe, non modifiable
+                      <span style={{ color: 'var(--text-muted)' }}> · {dateStatusLabel(modalTopic.fixedDate)}</span>
+                    </div>
                   </div>
                 </div>
               ) : (
@@ -1596,7 +1614,10 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
                             disabled={takenByOther}
                             onChange={() => toggleDate(d)}
                           />
-                          {formatSaturday(d)}{takenByOther ? ' — réservé par une autre formation' : ''}
+                          {formatSaturday(d)}
+                          {takenByOther
+                            ? ' — réservé par une autre formation'
+                            : <span style={{ color: 'var(--text-muted)' }}> · {dateStatusLabel(d)}</span>}
                         </label>
                       );
                     })}
