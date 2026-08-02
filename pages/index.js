@@ -105,10 +105,11 @@ function emptyTopicForm(topic) {
   };
 }
 
-function TopicFormModal({ mode, topic, onClose, onSaved }) {
+function TopicFormModal({ mode, topic, onClose, onSaved, onTopicsReplaced }) {
   const [form, setForm] = useState(emptyTopicForm(topic));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showJson, setShowJson] = useState(false);
 
   function set(field, value) {
     setForm((f) => ({ ...f, [field]: value }));
@@ -139,9 +140,20 @@ function TopicFormModal({ mode, topic, onClose, onSaved }) {
   }
 
   return (
+    <>
     <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className="modal" style={{ maxWidth: 640, maxHeight: '85vh', overflowY: 'auto' }}>
         <button className="modal-close" onClick={onClose}>✕</button>
+        {mode === 'edit' && topic && (
+          <button
+            type="button"
+            className="link-btn"
+            onClick={() => setShowJson(true)}
+            style={{ position: 'absolute', top: 22, right: 52, fontSize: 13, whiteSpace: 'nowrap' }}
+          >
+            ⇅ Export / Import JSON
+          </button>
+        )}
         <h2>{mode === 'create' ? 'Nouvelle formation' : 'Éditer la formation'}</h2>
 
         <form onSubmit={submit} style={{ marginTop: 16 }}>
@@ -280,6 +292,18 @@ function TopicFormModal({ mode, topic, onClose, onSaved }) {
         </form>
       </div>
     </div>
+    {showJson && (
+      <TopicJsonModal
+        topic={topic}
+        onClose={() => setShowJson(false)}
+        onImported={(list) => {
+          onTopicsReplaced?.(list);
+          setShowJson(false);
+          onClose();
+        }}
+      />
+    )}
+    </>
   );
 }
 
@@ -352,7 +376,6 @@ function TopicCard({ topic, index, isAdmin, onOpenRegister, onSaved, onDeleted, 
   const [error, setError] = useState('');
   const [showDetail, setShowDetail] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
-  const [showJson, setShowJson] = useState(false);
 
   async function toggleArchived() {
     setArchiving(true);
@@ -417,7 +440,6 @@ function TopicCard({ topic, index, isAdmin, onOpenRegister, onSaved, onDeleted, 
         {isAdmin && (
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             <button type="button" className="btn btn-ghost btn-sm" onClick={() => setShowEdit(true)}>✏️ Éditer</button>
-            <button type="button" className="btn btn-ghost btn-sm" onClick={() => setShowJson(true)}>{'{ } JSON'}</button>
             <button type="button" className="btn btn-ghost btn-sm" onClick={toggleArchived} disabled={archiving}>
               {archiving ? '…' : topic.archived ? 'Désarchiver' : 'Archiver'}
             </button>
@@ -432,10 +454,7 @@ function TopicCard({ topic, index, isAdmin, onOpenRegister, onSaved, onDeleted, 
 
       {showDetail && <TopicDetailModal topic={topic} onClose={() => setShowDetail(false)} onRegister={onOpenRegister} />}
       {showEdit && (
-        <TopicFormModal mode="edit" topic={topic} onClose={() => setShowEdit(false)} onSaved={onSaved} />
-      )}
-      {showJson && (
-        <TopicJsonModal topic={topic} onClose={() => setShowJson(false)} onImported={onTopicsReplaced} />
+        <TopicFormModal mode="edit" topic={topic} onClose={() => setShowEdit(false)} onSaved={onSaved} onTopicsReplaced={onTopicsReplaced} />
       )}
     </div>
   );
