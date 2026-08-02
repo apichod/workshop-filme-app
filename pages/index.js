@@ -2258,6 +2258,50 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
   const usedSessionTypes = [...new Set(sessions.map((s) => s.topic?.type || 'Formation'))];
   const usedTopicTypes = [...new Set(topics.map((t) => t.type || 'Formation'))];
   const usedTopicStatuses = [...new Set(topics.map((t) => topicStatusLabel(t, sessions)))];
+
+  // Lien "dynamique" vers le catalogue (utilisé par le CTA des bannières
+  // Hero, cf. hero.ctaLink) : ?type=…&statut=…&trie=… au chargement de la
+  // page pré-sélectionne les filtres/tri du catalogue, puis fait défiler
+  // jusqu'à la section #formations. Comparaison insensible aux accents/casse
+  // pour rester tolérant sur la façon dont le lien a été tapé.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const typeParam = params.get('type');
+    const statutParam = params.get('statut');
+    const trieParam = params.get('trie');
+    if (!typeParam && !statutParam && !trieParam) return;
+
+    const normalize = (s) => (s || '').toString().normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+
+    if (typeParam) {
+      const wanted = typeParam.split(',').map(normalize);
+      const matched = usedTopicTypes.filter((t) => wanted.includes(normalize(t)));
+      if (matched.length) setTopicTypeFilter(matched);
+    }
+    if (statutParam) {
+      const statusAliases = { programme: 'Programmé', flexible: 'Date flexible', datefexible: 'Date flexible' };
+      const wanted = statutParam.split(',').map(normalize);
+      const matched = usedTopicStatuses.filter((s) => wanted.includes(normalize(s)) || wanted.some((w) => normalize(statusAliases[w] || '') === normalize(s)));
+      if (matched.length) setTopicStatusFilter(matched);
+    }
+    if (trieParam) {
+      const sortAliases = {
+        newest: 'newest', nouveaute: 'newest', nouveautes: 'newest',
+        pricedesc: 'price_desc', prixdesc: 'price_desc',
+        priceasc: 'price_asc', prixasc: 'price_asc',
+        popular: 'popular', populaire: 'popular', populaires: 'popular',
+      };
+      const key = normalize(trieParam).replace(/[\s_-]+/g, '');
+      if (sortAliases[key]) setTopicSort(sortAliases[key]);
+    }
+
+    requestAnimationFrame(() => {
+      document.getElementById('formations')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Nombre total d'inscrits (toutes sessions à venir confondues) par formation
   // — sert de proxy à "Les plus demandées".
   const topicPopularity = new Map();
