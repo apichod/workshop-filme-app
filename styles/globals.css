@@ -380,7 +380,7 @@ h1, h2, h3, .section-head h2, .topic-card h3 { font-family: var(--font-heading-f
 
 /* ─── Tri (menu déroulant discret "Trier par :") ──────────────────────────── */
 
-.sort-row { display: flex; align-items: center; gap: 8px; margin-bottom: 18px; }
+.sort-row { display: flex; align-items: center; gap: 8px; }
 .sort-label { font-size: 14px; color: var(--text-muted); }
 .sort-select-wrap { position: relative; display: inline-flex; align-items: center; }
 .sort-select-wrap .icon { pointer-events: none; }
@@ -404,9 +404,13 @@ h1, h2, h3, .section-head h2, .topic-card h3 { font-family: var(--font-heading-f
 }
 .sort-select:focus { outline: none; }
 
+/* ─── Ligne combinée "Filtrer par :" (gauche) + "Trier par :" (droite) ─────── */
+
+.filter-sort-row { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 18px; }
+
 /* ─── Filtre (menu déroulant "Filtrer par : Type") ─────────────────────────── */
 
-.filter-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.filter-row { display: flex; align-items: center; gap: 8px; }
 .filter-dropdown { position: relative; display: inline-flex; align-items: center; }
 .filter-trigger {
   display: inline-flex;

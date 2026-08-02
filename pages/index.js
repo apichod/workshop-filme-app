@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import Head from 'next/head';
 import { getOpenSessions } from '../lib/sessions';
-import { getVisibleTopics, getAllTopics, CAPACITY, VALIDATION_THRESHOLD, PRICE_LABEL, TOPIC_CATEGORIES, TOPIC_TYPES, nextSaturdays, yearSaturdays, formatSaturday, formatPrice } from '../lib/topics';
+import { getVisibleTopics, getAllTopics, CAPACITY, VALIDATION_THRESHOLD, PRICE_LABEL, TOPIC_CATEGORIES, TOPIC_TYPES, nextSaturdays, yearSaturdays, formatSaturday, formatPrice, parsePriceValue } from '../lib/topics';
 import { getSiteContent, CONTENT_DEFAULTS } from '../lib/content';
 import { getClosedDates } from '../lib/closedDates';
 import { getSession } from '../lib/auth';
@@ -841,20 +841,32 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
   const [showTerms, setShowTerms] = useState(false);
   const [showTopicsJson, setShowTopicsJson] = useState(false);
   const [showPreferences, setShowPreferences] = useState(false);
-  const [categoryFilter, setCategoryFilter] = useState('');
   const [closedDates, setClosedDates] = useState(initialClosedDates || []);
   const [sessionSort, setSessionSort] = useState('rate'); // 'rate' (défaut) ou 'date'
   const [sessionTypeFilter, setSessionTypeFilter] = useState([]); // types cochés dans "Filtrer par : Type" ([] = tous)
+  const [topicTypeFilter, setTopicTypeFilter] = useState([]); // idem pour "Formations disponibles"
+  const [topicSort, setTopicSort] = useState(''); // '' (ordre par défaut), 'newest', 'price_desc', 'price_asc', 'popular'
 
   const saturdays = nextSaturdays(8, closedDates);
   const selectableTopics = topics.filter((t) => !t.archived);
-  const usedCategories = TOPIC_CATEGORIES.filter((c) => topics.some((t) => t.category === c));
   const usedSessionTypes = [...new Set(sessions.map((s) => s.topic?.type || 'Formation'))];
-  // Les formations archivées sont reléguées à la fin de la grille (tri stable
-  // par ailleurs : sort() est stable en JS, l'ordre existant est préservé).
-  const filteredTopics = (categoryFilter ? topics.filter((t) => t.category === categoryFilter) : topics)
-    .slice()
-    .sort((a, b) => (a.archived === b.archived ? 0 : a.archived ? 1 : -1));
+  const usedTopicTypes = [...new Set(topics.map((t) => t.type || 'Formation'))];
+  // Nombre total d'inscrits (toutes sessions à venir confondues) par formation
+  // — sert de proxy à "Les plus demandées".
+  const topicPopularity = new Map();
+  sessions.forEach((s) => {
+    topicPopularity.set(s.topicId, (topicPopularity.get(s.topicId) || 0) + s.count);
+  });
+  const filteredTopics = (topicTypeFilter.length ? topics.filter((t) => topicTypeFilter.includes(t.type || 'Formation')) : topics).slice();
+  if (topicSort === 'newest') filteredTopics.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+  else if (topicSort === 'price_desc') filteredTopics.sort((a, b) => parsePriceValue(b.price) - parsePriceValue(a.price));
+  else if (topicSort === 'price_asc') filteredTopics.sort((a, b) => parsePriceValue(a.price) - parsePriceValue(b.price));
+  else if (topicSort === 'popular') filteredTopics.sort((a, b) => (topicPopularity.get(b.id) || 0) - (topicPopularity.get(a.id) || 0));
+  // Les formations archivées sont toujours reléguées à la fin, quel que soit
+  // le tri choisi (tri stable par ailleurs : sort() est stable en JS, l'ordre
+  // établi juste au-dessus est préservé au sein de chaque groupe).
+  filteredTopics.sort((a, b) => (a.archived === b.archived ? 0 : a.archived ? 1 : -1));
+
   const sortedSessions = [...sessions].sort((a, b) =>
     sessionSort === 'date'
       ? a.dateIso.localeCompare(b.dateIso)
@@ -866,6 +878,9 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
 
   function toggleSessionType(t) {
     setSessionTypeFilter((list) => (list.includes(t) ? list.filter((x) => x !== t) : [...list, t]));
+  }
+  function toggleTopicType(t) {
+    setTopicTypeFilter((list) => (list.includes(t) ? list.filter((x) => x !== t) : [...list, t]));
   }
   const modalTopic = modal ? topics.find((t) => t.id === modal.topicId) : null;
 
@@ -1044,26 +1059,28 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
               <EditableText isAdmin={isAdmin} tag="span" className="hint" value={content.sessions_hint} onSave={(v) => saveContent('sessions_hint', v)} />
             </div>
           </div>
-          {sessions.length > 0 && usedSessionTypes.length > 1 && (
-            <div className="filter-row">
-              <span className="sort-label">Filtrer par :</span>
-              <SessionTypeFilter
-                options={usedSessionTypes}
-                selected={sessionTypeFilter}
-                onToggle={toggleSessionType}
-                onReset={() => setSessionTypeFilter([])}
-              />
-            </div>
-          )}
           {sessions.length > 0 && (
-            <div className="sort-row">
-              <span className="sort-label">Trier par :</span>
-              <div className="sort-select-wrap">
-                <select className="sort-select" value={sessionSort} onChange={(e) => setSessionSort(e.target.value)}>
-                  <option value="rate">Taux de remplissage</option>
-                  <option value="date">Date</option>
-                </select>
-                <Icon name="chevronDown" size={14} />
+            <div className="filter-sort-row">
+              {usedSessionTypes.length > 1 && (
+                <div className="filter-row">
+                  <span className="sort-label">Filtrer par :</span>
+                  <SessionTypeFilter
+                    options={usedSessionTypes}
+                    selected={sessionTypeFilter}
+                    onToggle={toggleSessionType}
+                    onReset={() => setSessionTypeFilter([])}
+                  />
+                </div>
+              )}
+              <div className="sort-row" style={{ marginLeft: 'auto' }}>
+                <span className="sort-label">Trier par :</span>
+                <div className="sort-select-wrap">
+                  <select className="sort-select" value={sessionSort} onChange={(e) => setSessionSort(e.target.value)}>
+                    <option value="rate">Taux de remplissage</option>
+                    <option value="date">Date</option>
+                  </select>
+                  <Icon name="chevronDown" size={14} />
+                </div>
               </div>
             </div>
           )}
@@ -1169,25 +1186,37 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
               </button>
             )}
           </div>
-          {usedCategories.length > 0 && (
-            <div className="sort-row">
+          <div className="filter-sort-row">
+            {usedTopicTypes.length > 1 && (
+              <div className="filter-row">
+                <span className="sort-label">Filtrer par :</span>
+                <SessionTypeFilter
+                  options={usedTopicTypes}
+                  selected={topicTypeFilter}
+                  onToggle={toggleTopicType}
+                  onReset={() => setTopicTypeFilter([])}
+                />
+              </div>
+            )}
+            <div className="sort-row" style={{ marginLeft: 'auto' }}>
               <span className="sort-label">Trier par :</span>
               <div className="sort-select-wrap">
-                <select className="sort-select" value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}>
-                  <option value="">Toutes les catégories</option>
-                  {usedCategories.map((c) => (
-                    <option key={c} value={c}>{c}</option>
-                  ))}
+                <select className="sort-select" value={topicSort} onChange={(e) => setTopicSort(e.target.value)}>
+                  <option value="">Par défaut</option>
+                  <option value="newest">Nouveautés</option>
+                  <option value="price_desc">Prix du + cher au - cher</option>
+                  <option value="price_asc">Prix du - cher au + cher</option>
+                  <option value="popular">Les plus demandées</option>
                 </select>
                 <Icon name="chevronDown" size={14} />
               </div>
             </div>
-          )}
+          </div>
 
           {topics.length === 0 && !isAdmin ? (
             <div className="card"><div className="empty">Aucune formation disponible pour le moment.</div></div>
           ) : filteredTopics.length === 0 ? (
-            <div className="card"><div className="empty">Aucune formation dans cette catégorie pour le moment.</div></div>
+            <div className="card"><div className="empty">Aucune formation ne correspond à ce filtre.</div></div>
           ) : (
             <div className="topics-grid">
               {filteredTopics.map((t) => (
