@@ -2264,7 +2264,9 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
   const [sessionSort, setSessionSort] = useState('rate'); // 'rate' (défaut) ou 'date'
   const [sessionsView, setSessionsView] = useState('liste'); // 'liste' | 'calendrier'
   const [sessionTypeFilter, setSessionTypeFilter] = useState([]); // types cochés dans "Filtrer par : Type" ([] = tous)
+  const [sessionCategoryFilter, setSessionCategoryFilter] = useState([]); // idem pour "Filtrer par : Catégorie"
   const [topicTypeFilter, setTopicTypeFilter] = useState([]); // idem pour "Formations disponibles"
+  const [topicCategoryFilter, setTopicCategoryFilter] = useState([]); // filtre "Catégorie" (Image / Lumière / Machinerie / Audio / Régie vidéo)
   const [topicStatusFilter, setTopicStatusFilter] = useState([]); // filtre "Statut : Programmé / Date flexible"
   const [topicSort, setTopicSort] = useState(''); // '' = "En vedette" (ordre manuel, sort_order), 'newest', 'price_desc', 'price_asc', 'popular'
   const [topicPage, setTopicPage] = useState(1); // pagination du catalogue (TOPICS_PAGE_SIZE par page)
@@ -2273,16 +2275,18 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
   // Le glisser-déposer ne fait sens que sur l'ordre manuel complet et non
   // filtré (tri "En vedette", aucun filtre actif) — sinon la position visuelle
   // ne correspond plus à un ordre qu'on peut réellement persister.
-  const topicReorderEnabled = isAdmin && topicSort === '' && topicTypeFilter.length === 0 && topicStatusFilter.length === 0;
+  const topicReorderEnabled = isAdmin && topicSort === '' && topicTypeFilter.length === 0 && topicCategoryFilter.length === 0 && topicStatusFilter.length === 0;
   // Revenir à la page 1 dès que le filtre ou le tri change, pour ne pas rester
   // bloqué sur une page qui n'existe plus dans la nouvelle liste.
   useEffect(() => {
     setTopicPage(1);
-  }, [topicTypeFilter, topicStatusFilter, topicSort]);
+  }, [topicTypeFilter, topicCategoryFilter, topicStatusFilter, topicSort]);
 
   const selectableTopics = topics.filter((t) => !t.archived);
   const usedSessionTypes = [...new Set(sessions.map((s) => s.topic?.type || 'Formation'))];
+  const usedSessionCategories = [...new Set(sessions.map((s) => s.topic?.category).filter(Boolean))];
   const usedTopicTypes = [...new Set(topics.map((t) => t.type || 'Formation'))];
+  const usedTopicCategories = [...new Set(topics.map((t) => t.category).filter(Boolean))];
   const usedTopicStatuses = [...new Set(topics.map((t) => topicStatusLabel(t, sessions)))];
 
   // Lien "dynamique" vers le catalogue (utilisé par le CTA des bannières
@@ -2336,6 +2340,7 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
   });
   const filteredTopics = topics
     .filter((t) => !topicTypeFilter.length || topicTypeFilter.includes(t.type || 'Formation'))
+    .filter((t) => !topicCategoryFilter.length || topicCategoryFilter.includes(t.category))
     .filter((t) => !topicStatusFilter.length || topicStatusFilter.includes(topicStatusLabel(t, sessions)));
   if (topicSort === 'newest') filteredTopics.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
   else if (topicSort === 'price_desc') filteredTopics.sort((a, b) => parsePriceValue(b.price) - parsePriceValue(a.price));
@@ -2385,15 +2390,21 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
       ? a.dateIso.localeCompare(b.dateIso)
       : b.rate - a.rate || a.dateIso.localeCompare(b.dateIso)
   );
-  const visibleSessions = sessionTypeFilter.length
-    ? sortedSessions.filter((s) => sessionTypeFilter.includes(s.topic?.type || 'Formation'))
-    : sortedSessions;
+  const visibleSessions = sortedSessions
+    .filter((s) => !sessionTypeFilter.length || sessionTypeFilter.includes(s.topic?.type || 'Formation'))
+    .filter((s) => !sessionCategoryFilter.length || sessionCategoryFilter.includes(s.topic?.category));
 
   function toggleSessionType(t) {
     setSessionTypeFilter((list) => (list.includes(t) ? list.filter((x) => x !== t) : [...list, t]));
   }
+  function toggleSessionCategory(t) {
+    setSessionCategoryFilter((list) => (list.includes(t) ? list.filter((x) => x !== t) : [...list, t]));
+  }
   function toggleTopicType(t) {
     setTopicTypeFilter((list) => (list.includes(t) ? list.filter((x) => x !== t) : [...list, t]));
+  }
+  function toggleTopicCategory(t) {
+    setTopicCategoryFilter((list) => (list.includes(t) ? list.filter((x) => x !== t) : [...list, t]));
   }
   function toggleTopicStatus(t) {
     setTopicStatusFilter((list) => (list.includes(t) ? list.filter((x) => x !== t) : [...list, t]));
@@ -2679,15 +2690,26 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
           </div>
           {sessions.length > 0 && (
             <div className="filter-sort-row">
-              {sessionsView === 'liste' && usedSessionTypes.length > 1 && (
+              {sessionsView === 'liste' && (usedSessionTypes.length > 1 || usedSessionCategories.length > 1) && (
                 <div className="filter-row">
                   <span className="sort-label">Filtrer par :</span>
-                  <SessionTypeFilter
-                    options={usedSessionTypes}
-                    selected={sessionTypeFilter}
-                    onToggle={toggleSessionType}
-                    onReset={() => setSessionTypeFilter([])}
-                  />
+                  {usedSessionTypes.length > 1 && (
+                    <SessionTypeFilter
+                      options={usedSessionTypes}
+                      selected={sessionTypeFilter}
+                      onToggle={toggleSessionType}
+                      onReset={() => setSessionTypeFilter([])}
+                    />
+                  )}
+                  {usedSessionCategories.length > 1 && (
+                    <SessionTypeFilter
+                      label="Catégorie"
+                      options={usedSessionCategories}
+                      selected={sessionCategoryFilter}
+                      onToggle={toggleSessionCategory}
+                      onReset={() => setSessionCategoryFilter([])}
+                    />
+                  )}
                 </div>
               )}
               <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 16 }}>
@@ -2831,7 +2853,7 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
             )}
           </div>
           <div className="filter-sort-row">
-            {(usedTopicTypes.length > 1 || usedTopicStatuses.length > 1) && (
+            {(usedTopicTypes.length > 1 || usedTopicCategories.length > 1 || usedTopicStatuses.length > 1) && (
               <div className="filter-row">
                 <span className="sort-label">Filtrer par :</span>
                 {usedTopicTypes.length > 1 && (
@@ -2841,6 +2863,15 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
                     selected={topicTypeFilter}
                     onToggle={toggleTopicType}
                     onReset={() => setTopicTypeFilter([])}
+                  />
+                )}
+                {usedTopicCategories.length > 1 && (
+                  <SessionTypeFilter
+                    label="Catégorie"
+                    options={usedTopicCategories}
+                    selected={topicCategoryFilter}
+                    onToggle={toggleTopicCategory}
+                    onReset={() => setTopicCategoryFilter([])}
                   />
                 )}
                 {usedTopicStatuses.length > 1 && (
