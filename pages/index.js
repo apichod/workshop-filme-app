@@ -923,7 +923,7 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
                         <div className={`bar-fill ${s.validated ? 'full' : ''}`} style={{ width: `${pct}%` }} />
                       </div>
                       <div className="bar-count">
-                        {s.count}/{s.capacity} inscrits · {s.validated ? 'Session confirmée' : `Plus que ${Math.max(0, VALIDATION_THRESHOLD - s.count)} avant validation`}
+                        {s.count}/{s.capacity} inscrits · {s.validated ? 'Session confirmée' : `Plus que ${Math.max(0, VALIDATION_THRESHOLD - s.count)} pour valider`}
                       </div>
                     </div>
                     <div className="action">
