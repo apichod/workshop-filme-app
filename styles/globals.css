@@ -154,6 +154,8 @@ h1, h2, h3, .section-head h2, .topic-card h3 { font-family: var(--font-heading-f
   cursor: pointer;
 }
 .checkbox-item input[type="checkbox"] { width: auto; accent-color: var(--accent); cursor: pointer; }
+.checkbox-item-disabled { color: var(--text-muted); cursor: not-allowed; font-style: italic; }
+.checkbox-item-disabled input[type="checkbox"] { cursor: not-allowed; }
 .form-error {
   background: rgba(245, 54, 105, 0.08);
   border: 1px solid rgba(245, 54, 105, 0.25);

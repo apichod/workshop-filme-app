@@ -3,6 +3,7 @@ import { getCustomerByEmail } from '../../lib/booqable';
 import { sendWorkshopConfirmation, sendWorkshopValidated } from '../../lib/mailer';
 import { CAPACITY, VALIDATION_THRESHOLD, getTopicById, isValidSaturday, formatSaturday } from '../../lib/topics';
 import { isDateClosed } from '../../lib/closedDates';
+import { cancelConflictingSessions, isDateTakenByAnotherTopic } from '../../lib/sessions';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Méthode non autorisée' });
@@ -20,6 +21,12 @@ export default async function handler(req, res) {
 
     // ─── Ce samedi a-t-il été fermé aux inscriptions (préférences admin) ? ───
     if (await isDateClosed(dateIso)) return res.status(400).json({ error: 'date_closed' });
+
+    // ─── Un seul workshop par samedi : une autre formation est-elle déjà
+    // validée à cette date ? ──────────────────────────────────────────────
+    if (await isDateTakenByAnotherTopic(dateIso, topicId)) {
+      return res.status(400).json({ error: 'date_taken' });
+    }
 
     // ─── Vérification "client Filme" via Booqable (même lib que monespace.filme.fr) ───
     const customer = await getCustomerByEmail(normalizedEmail);
@@ -85,6 +92,10 @@ export default async function handler(req, res) {
         .select('name, email')
         .eq('session_id', session.id);
       await sendWorkshopValidated(registrants || [], topic, dateLabel);
+
+      // Un seul workshop par samedi : on annule les autres formations pas
+      // encore validées proposées à cette même date.
+      await cancelConflictingSessions(dateIso, session.id, topic, dateLabel);
     } else {
       await sendWorkshopConfirmation(normalizedEmail, name.trim(), topic, dateLabel, {
         alreadyValidated: nowValidated,

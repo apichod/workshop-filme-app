@@ -817,6 +817,7 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
     if (r.error === 'already_registered') return 'Déjà inscrit(e) sur cette session';
     if (r.error === 'topic_archived') return "Cette formation n'est plus proposée";
     if (r.error === 'date_closed') return "Ce samedi n'est pas disponible";
+    if (r.error === 'date_taken') return "Une autre formation a déjà été validée ce samedi-là";
     return 'Erreur, réessayez';
   }
 
@@ -1073,16 +1074,22 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
               <div className="form-group">
                 <label className="form-label">Samedis ({modal.dates.length} sélectionné{modal.dates.length > 1 ? 's' : ''})</label>
                 <div className="checkbox-list">
-                  {saturdays.map((d) => (
-                    <label className="checkbox-item" key={d}>
-                      <input
-                        type="checkbox"
-                        checked={modal.dates.includes(d)}
-                        onChange={() => toggleDate(d)}
-                      />
-                      {formatSaturday(d)}
-                    </label>
-                  ))}
+                  {saturdays.map((d) => {
+                    // Un seul workshop par samedi : les dates déjà validées pour une
+                    // AUTRE formation ne sont plus proposables ici.
+                    const takenByOther = sessions.some((s) => s.validated && s.dateIso === d && s.topicId !== modal.topicId);
+                    return (
+                      <label className={`checkbox-item ${takenByOther ? 'checkbox-item-disabled' : ''}`} key={d}>
+                        <input
+                          type="checkbox"
+                          checked={modal.dates.includes(d)}
+                          disabled={takenByOther}
+                          onChange={() => toggleDate(d)}
+                        />
+                        {formatSaturday(d)}{takenByOther ? ' — déjà pris par une autre formation' : ''}
+                      </label>
+                    );
+                  })}
                 </div>
               </div>
 
