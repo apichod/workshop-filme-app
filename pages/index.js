@@ -1505,7 +1505,15 @@ function FormateurFormModal({ formateur, onClose, onSaved, topics, onTopicUpdate
       <FormateurJsonModal
         formateur={formateur}
         onClose={() => setShowJson(false)}
-        onImported={(f) => { onSaved(f); setShowJson(false); }}
+        onImported={(f) => {
+          // Le formulaire garde ses propres champs en mémoire (state local) :
+          // après un import JSON, on ferme toute la modale plutôt que de la
+          // laisser ouverte avec d'anciennes valeurs affichées (il fallait
+          // sinon rouvrir la fenêtre pour voir les données importées).
+          onSaved(f);
+          setShowJson(false);
+          onClose();
+        }}
       />
     )}
     </>
