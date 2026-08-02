@@ -1,16 +1,15 @@
 import { supabaseAdmin } from '../../lib/supabase';
 import { getCustomerByEmail } from '../../lib/booqable';
 import { sendWorkshopConfirmation, sendWorkshopValidated } from '../../lib/mailer';
-import { CAPACITY, VALIDATION_THRESHOLD, getTopicById, isValidSaturday, formatSaturday } from '../../lib/topics';
+import { CAPACITY, getTopicById, isValidSaturday, formatSaturday } from '../../lib/topics';
 import { isDateClosed } from '../../lib/closedDates';
-import { cancelConflictingSessions, isDateTakenByAnotherTopic } from '../../lib/sessions';
+import { cancelConflictingSessions, isDateTakenByAnotherTopic, effectiveThreshold, isPriorityTopic } from '../../lib/sessions';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Méthode non autorisée' });
 
   const { topicId, dateIso, name, email } = req.body || {};
 
-  if (!isValidSaturday(dateIso)) return res.status(400).json({ error: 'Merci de choisir un samedi à venir' });
   if (!name?.trim() || !email?.trim()) return res.status(400).json({ error: 'Nom et email requis' });
 
   const normalizedEmail = email.trim().toLowerCase();
@@ -19,13 +18,25 @@ export default async function handler(req, res) {
     const topic = await getTopicById(topicId);
     if (!topic) return res.status(400).json({ error: 'Formation inconnue' });
     const capacity = topic.maxParticipants || CAPACITY;
+    const threshold = effectiveThreshold(topic);
+    const priority = isPriorityTopic(topic);
+
+    // ─── Une formation à date fixe ne peut recevoir d'inscription que pour
+    // cette date précise (n'importe quel jour de la semaine) ; les autres
+    // formations restent limitées aux samedis à venir. ────────────────────
+    if (topic.fixedDate) {
+      if (dateIso !== topic.fixedDate) return res.status(400).json({ error: 'date_closed' });
+    } else if (!isValidSaturday(dateIso)) {
+      return res.status(400).json({ error: 'Merci de choisir un samedi à venir' });
+    }
 
     // ─── Ce samedi a-t-il été fermé aux inscriptions (préférences admin) ? ───
     if (await isDateClosed(dateIso)) return res.status(400).json({ error: 'date_closed' });
 
     // ─── Un seul workshop par samedi : une autre formation est-elle déjà
-    // validée à cette date ? ──────────────────────────────────────────────
-    if (await isDateTakenByAnotherTopic(dateIso, topicId)) {
+    // validée (ou réservée via une date fixe) à cette date ? Une formation
+    // prioritaire (seuil 0 ou date fixe) passe outre ce blocage. ───────────
+    if (!priority && (await isDateTakenByAnotherTopic(dateIso, topicId))) {
       return res.status(400).json({ error: 'date_taken' });
     }
 
@@ -81,12 +92,13 @@ export default async function handler(req, res) {
 
     const newCount = (count || 0) + 1;
     const dateLabel = formatSaturday(dateIso);
-    const justCrossedThreshold = !wasValidated && newCount >= VALIDATION_THRESHOLD;
+    const justCrossedThreshold = !wasValidated && newCount >= threshold;
     const nowValidated = wasValidated || justCrossedThreshold;
 
     if (justCrossedThreshold) {
-      // Première fois que le seuil est atteint : on marque la session validée
-      // et on prévient TOUS les inscrits (pas seulement le dernier).
+      // Première fois que le seuil est atteint (immédiatement si seuil 0) : on
+      // marque la session validée et on prévient TOUS les inscrits (pas
+      // seulement le dernier).
       await supabaseAdmin.from('workshop_sessions').update({ validated: true }).eq('id', session.id);
       const { data: registrants } = await supabaseAdmin
         .from('workshop_registrations')
@@ -94,13 +106,14 @@ export default async function handler(req, res) {
         .eq('session_id', session.id);
       await sendWorkshopValidated(registrants || [], topic, dateLabel);
 
-      // Un seul workshop par samedi : on annule les autres formations pas
-      // encore validées proposées à cette même date.
-      await cancelConflictingSessions(dateIso, session.id, topic, dateLabel);
+      // Un seul évènement par date : on annule les autres formations pas
+      // encore validées proposées à cette même date — ou absolument toutes
+      // (même déjà validées) si cette formation est prioritaire.
+      await cancelConflictingSessions(dateIso, session.id, topic, dateLabel, { fullPriority: priority });
     } else {
       await sendWorkshopConfirmation(normalizedEmail, name.trim(), topic, dateLabel, {
         alreadyValidated: nowValidated,
-        placesBeforeValidation: Math.max(0, VALIDATION_THRESHOLD - newCount),
+        placesBeforeValidation: Math.max(0, threshold - newCount),
       });
     }
 

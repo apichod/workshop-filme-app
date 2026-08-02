@@ -1,5 +1,8 @@
 import { requireAuth } from '../../../../lib/auth';
 import { getAllTopics, createTopic } from '../../../../lib/topics';
+import { enforceFixedDateExclusivity } from '../../../../lib/sessions';
+
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 export default requireAuth(async function handler(req, res) {
   if (req.method === 'GET') {
@@ -13,9 +16,11 @@ export default requireAuth(async function handler(req, res) {
   }
 
   if (req.method === 'POST') {
-    const { title, level, desc, fullDescription, program, price, duration, category, type, bonus, maxParticipants, equipment } = req.body || {};
+    const { title, level, desc, fullDescription, program, price, duration, category, type, bonus, maxParticipants, equipment, minParticipants, fixedDate } = req.body || {};
     if (!title?.trim()) return res.status(400).json({ error: 'Le titre est requis' });
     const parsedMax = Number.parseInt(maxParticipants, 10);
+    const parsedMin = Number.parseInt(minParticipants, 10);
+    const cleanFixedDate = fixedDate && DATE_RE.test(fixedDate) ? fixedDate : null;
     try {
       const topic = await createTopic({
         title: title.trim(),
@@ -30,7 +35,10 @@ export default requireAuth(async function handler(req, res) {
         bonus: (bonus || '').trim(),
         maxParticipants: Number.isFinite(parsedMax) && parsedMax > 0 ? parsedMax : null,
         equipment: (equipment || '').trim(),
+        minParticipants: Number.isFinite(parsedMin) && parsedMin >= 0 ? parsedMin : null,
+        fixedDate: cleanFixedDate,
       });
+      if (topic.fixedDate) await enforceFixedDateExclusivity(topic);
       return res.status(200).json({ topic });
     } catch (err) {
       console.error('[admin/topics POST]', err);

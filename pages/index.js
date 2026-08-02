@@ -90,6 +90,8 @@ function emptyTopicForm(topic) {
     bonus: topic?.bonus || '',
     maxParticipants: topic?.maxParticipants ? String(topic.maxParticipants) : '',
     equipment: topic?.equipment || '',
+    minParticipants: Number.isFinite(topic?.minParticipants) ? String(topic.minParticipants) : '',
+    fixedDate: topic?.fixedDate || '',
   };
 }
 
@@ -189,6 +191,23 @@ function TopicFormModal({ mode, topic, onClose, onSaved }) {
               <label className="form-label">Durée</label>
               <input className="form-input" value={form.duration} onChange={(e) => set('duration', e.target.value)} placeholder="Sinon : 1 journée (9h–18h)" />
             </div>
+          </div>
+
+          <div style={{ display: 'flex', gap: 12 }}>
+            <div className="form-group" style={{ flex: 1 }}>
+              <label className="form-label">Participants min</label>
+              <input
+                className="form-input"
+                type="number"
+                min={0}
+                value={form.minParticipants}
+                onChange={(e) => set('minParticipants', e.target.value)}
+                placeholder={`Sinon : ${VALIDATION_THRESHOLD}`}
+              />
+              <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
+                0 = priorité totale : dès la 1ère inscription, annule tout autre évènement à cette date (même déjà confirmé).
+              </div>
+            </div>
             <div className="form-group" style={{ flex: 1 }}>
               <label className="form-label">Participants max</label>
               <input
@@ -199,6 +218,25 @@ function TopicFormModal({ mode, topic, onClose, onSaved }) {
                 onChange={(e) => set('maxParticipants', e.target.value)}
                 placeholder={`Sinon : ${CAPACITY}`}
               />
+            </div>
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">Date fixe</label>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <input
+                className="form-input"
+                type="date"
+                value={form.fixedDate}
+                onChange={(e) => set('fixedDate', e.target.value)}
+                style={{ flex: 1 }}
+              />
+              {form.fixedDate && (
+                <button type="button" className="btn btn-ghost btn-sm" onClick={() => set('fixedDate', '')}>Retirer</button>
+              )}
+            </div>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
+              Remplace, pour cette formation, la liste des samedis proposée par cette date unique (n'importe quel jour). Cette date est alors réservée en exclusivité : elle annule tout autre évènement déjà programmé ce jour-là et n'est plus proposée pour aucune autre formation.
             </div>
           </div>
 
@@ -242,6 +280,9 @@ function TopicDetailModal({ topic, onClose, onRegister }) {
         <div className="level" style={{ marginTop: 4 }}>
           {[topic.level, topic.price || PRICE_LABEL, topic.duration || '1 journée (9h–18h)', `${topic.maxParticipants || CAPACITY} participants max`].filter(Boolean).join(' · ')}
         </div>
+        {topic.fixedDate && (
+          <div className="bonus-note" style={{ marginTop: 10 }}>📅 Date fixée : {formatSaturday(topic.fixedDate)}</div>
+        )}
         {topic.bonus && (
           <div className="bonus-note" style={{ marginTop: 10 }}>🎁 {topic.bonus}</div>
         )}
@@ -337,6 +378,7 @@ function TopicCard({ topic, index, isAdmin, onOpenRegister, onSaved, onDeleted }
       <h3>{topic.title}</h3>
       <p>{topic.desc}</p>
       {topic.bonus && <div className="bonus-note">🎁 {topic.bonus}</div>}
+      {topic.fixedDate && <div className="bonus-note">📅 Date fixée : {formatSaturday(topic.fixedDate)}</div>}
       <div className="level">{[topic.level, topic.price || PRICE_LABEL, topic.duration || '1 journée (9h–18h)'].filter(Boolean).join(' · ')}</div>
       {error && <div className="form-error">{error}</div>}
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
@@ -812,11 +854,20 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
   }
 
   function openModal(topicId, dateIso) {
-    setModal({ topicId: topicId || selectableTopics[0]?.id, dates: dateIso ? [dateIso] : [] });
+    const tId = topicId || selectableTopics[0]?.id;
+    const t = topics.find((x) => x.id === tId);
+    // Une formation à date fixe n'a qu'une seule date possible : elle
+    // remplace la liste de samedis à cocher.
+    setModal({ topicId: tId, dates: t?.fixedDate ? [t.fixedDate] : (dateIso ? [dateIso] : []) });
     setForm({ name: '', email: '' });
     setStatus({ loading: false, error: '', results: [] });
   }
   function closeModal() { setModal(null); }
+
+  function selectModalTopic(topicId) {
+    const t = topics.find((x) => x.id === topicId);
+    setModal((m) => ({ ...m, topicId, dates: t?.fixedDate ? [t.fixedDate] : [] }));
+  }
 
   function toggleDate(dateIso) {
     setModal((m) => ({
@@ -874,12 +925,13 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
   }
 
   function resultLabel(r) {
-    if (r.ok) return r.validated ? '🎉 Formation validée !' : `Confirmée (${Math.max(0, VALIDATION_THRESHOLD - r.count)} inscription(s) avant validation)`;
+    const threshold = Number.isFinite(modalTopic?.minParticipants) ? modalTopic.minParticipants : VALIDATION_THRESHOLD;
+    if (r.ok) return r.validated ? '🎉 Formation validée !' : `Confirmée (${Math.max(0, threshold - r.count)} inscription(s) avant validation)`;
     if (r.error === 'full') return 'Session déjà complète';
     if (r.error === 'already_registered') return 'Déjà inscrit(e) sur cette session';
     if (r.error === 'topic_archived') return "Cette formation n'est plus proposée";
-    if (r.error === 'date_closed') return "Ce samedi n'est pas disponible";
-    if (r.error === 'date_taken') return "Une autre formation a déjà été validée ce samedi-là";
+    if (r.error === 'date_closed') return "Cette date n'est pas disponible";
+    if (r.error === 'date_taken') return "Une autre formation a déjà été validée (ou réservée) à cette date";
     return 'Erreur, réessayez';
   }
 
@@ -985,7 +1037,7 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
                         <div className={`bar-fill ${s.validated ? 'full' : ''}`} style={{ width: `${pct}%` }} />
                       </div>
                       <div className="bar-count">
-                        {s.count}/{s.capacity} inscrits · {s.validated ? 'Session confirmée' : `Plus que ${Math.max(0, VALIDATION_THRESHOLD - s.count)} pour confirmer`}
+                        {s.count}/{s.capacity} inscrits · {s.validated ? 'Session confirmée' : `Plus que ${Math.max(0, s.threshold - s.count)} pour confirmer`}
                       </div>
                     </div>
                     <div className="action">
@@ -1117,7 +1169,10 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
           <div className="modal">
             <button className="modal-close" onClick={closeModal}>✕</button>
             <h2>S'inscrire à un workshop</h2>
-            <div className="modal-sub">{modalTopic?.price || PRICE_LABEL} — {modalTopic?.maxParticipants || CAPACITY} places maximum · vous pouvez cocher plusieurs samedis pour la même formation</div>
+            <div className="modal-sub">
+              {modalTopic?.price || PRICE_LABEL} — {modalTopic?.maxParticipants || CAPACITY} places maximum
+              {modalTopic?.fixedDate ? '' : ' · vous pouvez cocher plusieurs samedis pour la même formation'}
+            </div>
 
             <form onSubmit={submit}>
               <div className="form-group">
@@ -1125,7 +1180,7 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
                 <select
                   className="form-input"
                   value={modal.topicId}
-                  onChange={(e) => setModal({ ...modal, topicId: e.target.value })}
+                  onChange={(e) => selectModalTopic(e.target.value)}
                 >
                   {selectableTopics.map((t) => (
                     <option key={t.id} value={t.id}>{t.title}</option>
@@ -1133,27 +1188,39 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
                 </select>
               </div>
 
-              <div className="form-group">
-                <label className="form-label">Samedis ({modal.dates.length} sélectionné{modal.dates.length > 1 ? 's' : ''})</label>
-                <div className="checkbox-list">
-                  {saturdays.map((d) => {
-                    // Un seul workshop par samedi : les dates déjà validées pour une
-                    // AUTRE formation ne sont plus proposables ici.
-                    const takenByOther = sessions.some((s) => s.validated && s.dateIso === d && s.topicId !== modal.topicId);
-                    return (
-                      <label className={`checkbox-item ${takenByOther ? 'checkbox-item-disabled' : ''}`} key={d}>
-                        <input
-                          type="checkbox"
-                          checked={modal.dates.includes(d)}
-                          disabled={takenByOther}
-                          onChange={() => toggleDate(d)}
-                        />
-                        {formatSaturday(d)}{takenByOther ? ' — déjà pris par une autre formation' : ''}
-                      </label>
-                    );
-                  })}
+              {modalTopic?.fixedDate ? (
+                <div className="form-group">
+                  <label className="form-label">Date</label>
+                  <div className="checkbox-list">
+                    <div className="checkbox-item">Le {formatSaturday(modalTopic.fixedDate)} — date fixe, non modifiable</div>
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div className="form-group">
+                  <label className="form-label">Samedis ({modal.dates.length} sélectionné{modal.dates.length > 1 ? 's' : ''})</label>
+                  <div className="checkbox-list">
+                    {saturdays.map((d) => {
+                      // Un seul évènement par date : les dates déjà validées pour une
+                      // AUTRE formation, ou réservées par la date fixe d'une autre
+                      // formation, ne sont plus proposables ici.
+                      const takenByOther =
+                        sessions.some((s) => s.validated && s.dateIso === d && s.topicId !== modal.topicId) ||
+                        topics.some((t) => t.fixedDate === d && t.id !== modal.topicId);
+                      return (
+                        <label className={`checkbox-item ${takenByOther ? 'checkbox-item-disabled' : ''}`} key={d}>
+                          <input
+                            type="checkbox"
+                            checked={modal.dates.includes(d)}
+                            disabled={takenByOther}
+                            onChange={() => toggleDate(d)}
+                          />
+                          {formatSaturday(d)}{takenByOther ? ' — réservé par une autre formation' : ''}
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
 
               <div className="form-group">
                 <label className="form-label">Nom complet</label>
