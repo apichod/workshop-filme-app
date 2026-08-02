@@ -736,7 +736,62 @@ function RegistrationsPreferences({ onChanged }) {
   );
 }
 
-function PreferencesModal({ closedDates, onToggle, onSessionsChanged, onClose }) {
+function ActiveTopicsPreferences({ topics, onDeleted }) {
+  const [error, setError] = useState('');
+  const [deletingId, setDeletingId] = useState(null);
+  const activeTopics = topics.filter((t) => !t.archived);
+
+  async function remove(topic) {
+    if (!window.confirm(`Supprimer définitivement « ${topic.title} » ? Cette action est irréversible.`)) return;
+    setDeletingId(topic.id);
+    setError('');
+    try {
+      const res = await fetch(`/api/admin/topics/${topic.id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Erreur');
+      onDeleted(topic.id);
+    } catch (err) {
+      setError(err.message || 'Erreur');
+    } finally {
+      setDeletingId(null);
+    }
+  }
+
+  return (
+    <>
+      <p style={{ color: 'var(--text-muted)', fontSize: 13, marginTop: 8, marginBottom: 16 }}>
+        Supprimez définitivement une formation active si besoin (créée par erreur, doublon…). Impossible si
+        des sessions (passées ou à venir) lui sont déjà rattachées — archivez-la plutôt dans ce cas.
+      </p>
+
+      {error && <div className="form-error">{error}</div>}
+
+      {activeTopics.length === 0 ? (
+        <div className="empty">Aucune formation active pour le moment.</div>
+      ) : (
+        activeTopics.map((t) => (
+          <div
+            key={t.id}
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, fontSize: 13, padding: '8px 0', borderBottom: '1px solid var(--border)' }}
+          >
+            <span>{t.title}</span>
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm"
+              disabled={deletingId === t.id}
+              onClick={() => remove(t)}
+              style={{ color: '#c0392b' }}
+            >
+              {deletingId === t.id ? '…' : 'Supprimer'}
+            </button>
+          </div>
+        ))
+      )}
+    </>
+  );
+}
+
+function PreferencesModal({ closedDates, onToggle, onSessionsChanged, topics, onTopicDeleted, onClose }) {
   const [tab, setTab] = useState('samedis');
 
   return (
@@ -745,16 +800,15 @@ function PreferencesModal({ closedDates, onToggle, onSessionsChanged, onClose })
         <button className="modal-close" onClick={onClose}>✕</button>
         <h2>Préférences</h2>
 
-        <div style={{ display: 'flex', gap: 8, marginTop: 16, marginBottom: 4 }}>
+        <div style={{ display: 'flex', gap: 8, marginTop: 16, marginBottom: 4, flexWrap: 'wrap' }}>
           <button type="button" className={`btn btn-sm ${tab === 'samedis' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setTab('samedis')}>Samedis proposés</button>
           <button type="button" className={`btn btn-sm ${tab === 'inscriptions' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setTab('inscriptions')}>Inscriptions</button>
+          <button type="button" className={`btn btn-sm ${tab === 'formations' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setTab('formations')}>Formations actives</button>
         </div>
 
-        {tab === 'samedis' ? (
-          <SaturdaysPreferences closedDates={closedDates} onToggle={onToggle} />
-        ) : (
-          <RegistrationsPreferences onChanged={onSessionsChanged} />
-        )}
+        {tab === 'samedis' && <SaturdaysPreferences closedDates={closedDates} onToggle={onToggle} />}
+        {tab === 'inscriptions' && <RegistrationsPreferences onChanged={onSessionsChanged} />}
+        {tab === 'formations' && <ActiveTopicsPreferences topics={topics} onDeleted={onTopicDeleted} />}
 
         <div className="modal-actions">
           <button type="button" className="btn btn-primary" onClick={onClose}>Fermer</button>
@@ -1423,6 +1477,8 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
           closedDates={closedDates}
           onToggle={toggleClosedDate}
           onSessionsChanged={refreshSessions}
+          topics={topics}
+          onTopicDeleted={removeTopicFromList}
           onClose={() => setShowPreferences(false)}
         />
       )}

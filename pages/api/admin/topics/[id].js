@@ -12,7 +12,6 @@ export default requireAuth(async function handler(req, res) {
       const result = await deleteTopic(id);
       if (!result.ok) {
         if (result.error === 'not_found') return res.status(404).json({ error: 'Formation introuvable' });
-        if (result.error === 'not_archived') return res.status(400).json({ error: 'Seule une formation archivée peut être supprimée' });
         if (result.error === 'has_sessions') return res.status(400).json({ error: 'Des sessions existent encore pour cette formation, elle ne peut pas être supprimée' });
         return res.status(400).json({ error: 'Suppression impossible' });
       }
