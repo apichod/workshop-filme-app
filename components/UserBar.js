@@ -25,7 +25,7 @@ export default function UserBar({ session }) {
         aria-label="Compte"
         aria-expanded={open}
       >
-        <Icon name="user" size={22} />
+        <Icon name="user" size={30} />
       </button>
 
       {open && (
