@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import Head from 'next/head';
 import { getOpenSessions } from '../lib/sessions';
-import { getVisibleTopics, getAllTopics, CAPACITY, VALIDATION_THRESHOLD, PRICE_LABEL, TOPIC_CATEGORIES, nextSaturdays, yearSaturdays, formatSaturday } from '../lib/topics';
+import { getVisibleTopics, getAllTopics, CAPACITY, VALIDATION_THRESHOLD, PRICE_LABEL, TOPIC_CATEGORIES, TOPIC_TYPES, nextSaturdays, yearSaturdays, formatSaturday } from '../lib/topics';
 import { getSiteContent, CONTENT_DEFAULTS } from '../lib/content';
 import { getClosedDates } from '../lib/closedDates';
 import { getSession } from '../lib/auth';
@@ -86,6 +86,7 @@ function emptyTopicForm(topic) {
     price: topic?.price || '',
     duration: topic?.duration || '',
     category: topic?.category || '',
+    type: topic?.type || 'Formation',
     bonus: topic?.bonus || '',
   };
 }
@@ -132,12 +133,20 @@ function TopicFormModal({ mode, topic, onClose, onSaved }) {
         <form onSubmit={submit} style={{ marginTop: 16 }}>
           {error && <div className="form-error">{error}</div>}
 
-          <div className="form-group">
-            <label className="form-label">Catégorie</label>
-            <select className="form-input" value={form.category} onChange={(e) => set('category', e.target.value)}>
-              <option value="">— Aucune —</option>
-              {TOPIC_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
-            </select>
+          <div style={{ display: 'flex', gap: 12 }}>
+            <div className="form-group" style={{ flex: 1 }}>
+              <label className="form-label">Type</label>
+              <select className="form-input" value={form.type} onChange={(e) => set('type', e.target.value)}>
+                {TOPIC_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+              </select>
+            </div>
+            <div className="form-group" style={{ flex: 1 }}>
+              <label className="form-label">Catégorie</label>
+              <select className="form-input" value={form.category} onChange={(e) => set('category', e.target.value)}>
+                <option value="">— Aucune —</option>
+                {TOPIC_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
           </div>
 
           <div className="form-group">
@@ -275,7 +284,7 @@ function TopicCard({ topic, index, isAdmin, onOpenRegister, onSaved }) {
   return (
     <div className="card topic-card" style={{ opacity: topic.archived ? 0.55 : 1 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
-        <div className="idx">Formation</div>
+        <div className="idx">{topic.type || 'Formation'}</div>
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
           {topic.category && <span className={`badge ${categoryStyle(topic.category).badgeClass}`}>{topic.category}</span>}
           {topic.archived && <span className="badge badge-gray">Archivée</span>}
