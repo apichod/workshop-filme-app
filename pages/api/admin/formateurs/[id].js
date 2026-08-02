@@ -5,7 +5,7 @@ export default requireAuth(async function handler(req, res) {
   const { id } = req.query;
 
   if (req.method === 'PATCH') {
-    const { name, email, bio, specialties, photoUrl } = req.body || {};
+    const { name, email, bio, specialties, photoUrl, archived } = req.body || {};
     if (name !== undefined && !name.trim()) return res.status(400).json({ error: 'Le nom est requis' });
     if (email !== undefined && !email.trim()) return res.status(400).json({ error: "L'email est requis" });
     try {
@@ -15,6 +15,7 @@ export default requireAuth(async function handler(req, res) {
         bio: bio !== undefined ? bio.trim() : undefined,
         specialties: specialties !== undefined ? specialties.trim() : undefined,
         photoUrl: photoUrl !== undefined ? photoUrl.trim() : undefined,
+        archived: archived !== undefined ? !!archived : undefined,
       });
       if (!formateur) return res.status(404).json({ error: 'Formateur introuvable' });
       return res.status(200).json({ formateur });

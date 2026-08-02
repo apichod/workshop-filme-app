@@ -4,7 +4,7 @@ import { getOpenSessions } from '../lib/sessions';
 import { getVisibleTopics, getAllTopics, CAPACITY, VALIDATION_THRESHOLD, PRICE_LABEL, TOPIC_CATEGORIES, TOPIC_TYPES, SCHEDULE_OPTIONS, nextWeekdayDates, topicWeekday, scheduleOption, yearSaturdays, formatSaturday, formatPrice, parsePriceValue } from '../lib/topics';
 import { getSiteContent, CONTENT_DEFAULTS } from '../lib/content';
 import { getClosedDates } from '../lib/closedDates';
-import { getAllFormateurs } from '../lib/formateurs';
+import { getAllFormateurs, getVisibleFormateurs } from '../lib/formateurs';
 import { getSession } from '../lib/auth';
 import AdminBar from '../components/AdminBar';
 import UserBar from '../components/UserBar';
@@ -1155,6 +1155,125 @@ function FormateurForm({ formateur, onCancel, onSaved }) {
   );
 }
 
+// Popup d'édition d'un formateur depuis sa carte homepage (réutilise
+// FormateurForm, déjà utilisé "en ligne" dans Préférences → Formateurs).
+function FormateurFormModal({ formateur, onClose, onSaved }) {
+  return (
+    <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="modal" style={{ maxWidth: 560, maxHeight: '85vh', overflowY: 'auto' }}>
+        <button className="modal-close" onClick={onClose}>✕</button>
+        <h2>Éditer le formateur</h2>
+        <div style={{ marginTop: 16 }}>
+          <FormateurForm
+            formateur={formateur}
+            onCancel={onClose}
+            onSaved={(f) => { onSaved(f); onClose(); }}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Popup public "En savoir plus" pour un formateur.
+function FormateurDetailModal({ formateur, onClose }) {
+  const specialtyTags = (formateur.specialties || '').split(',').map((s) => s.trim()).filter(Boolean);
+  return (
+    <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="modal" style={{ maxWidth: 480, maxHeight: '85vh', overflowY: 'auto' }}>
+        <button className="modal-close" onClick={onClose}>✕</button>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 8 }}>
+          {formateur.photoUrl ? (
+            <img src={formateur.photoUrl} alt={formateur.name} className="formateur-photo" style={{ width: 96, height: 96 }} />
+          ) : (
+            <div className="formateur-photo formateur-photo-placeholder" style={{ width: 96, height: 96 }}>
+              <Icon name="user" size={36} />
+            </div>
+          )}
+          <h2 style={{ margin: 0 }}>{formateur.name}</h2>
+          {specialtyTags.length > 0 && (
+            <div className="formateur-tags">
+              {specialtyTags.map((s) => <span className={`badge ${categoryStyle(s).badgeClass}`} key={s}>{s}</span>)}
+            </div>
+          )}
+          {formateur.bio && (
+            <p style={{ whiteSpace: 'pre-wrap', fontSize: 14, color: 'var(--text)', lineHeight: 1.7, marginTop: 12 }}>
+              {formateur.bio}
+            </p>
+          )}
+        </div>
+        <div className="modal-actions">
+          <button type="button" className="btn btn-ghost" onClick={onClose}>Fermer</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Carte formateur — section publique "Nos formateurs". Toujours "En savoir
+// plus" ; en admin, également Éditer / Archiver (même logique que TopicCard).
+function FormateurCard({ formateur, isAdmin, onSaved }) {
+  const [showDetail, setShowDetail] = useState(false);
+  const [showEdit, setShowEdit] = useState(false);
+  const [archiving, setArchiving] = useState(false);
+  const [error, setError] = useState('');
+  const specialtyTags = (formateur.specialties || '').split(',').map((s) => s.trim()).filter(Boolean);
+
+  async function toggleArchived() {
+    setArchiving(true);
+    setError('');
+    try {
+      const res = await fetch(`/api/admin/formateurs/${formateur.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ archived: !formateur.archived }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Erreur');
+      onSaved(data.formateur);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setArchiving(false);
+    }
+  }
+
+  return (
+    <div className="card formateur-card" style={{ opacity: formateur.archived ? 0.55 : 1 }}>
+      {formateur.archived && <span className="badge badge-gray">Archivé</span>}
+      {formateur.photoUrl ? (
+        <img src={formateur.photoUrl} alt={formateur.name} className="formateur-photo" />
+      ) : (
+        <div className="formateur-photo formateur-photo-placeholder"><Icon name="user" size={26} /></div>
+      )}
+      <div className="formateur-name">{formateur.name}</div>
+      {specialtyTags.length > 0 && (
+        <div className="formateur-tags">
+          {specialtyTags.map((s) => <span className={`badge ${categoryStyle(s).badgeClass}`} key={s}>{s}</span>)}
+        </div>
+      )}
+      {formateur.bio && <p className="formateur-bio">{formateur.bio}</p>}
+
+      {error && <div className="form-error">{error}</div>}
+
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center' }}>
+        <button type="button" className="link-btn" onClick={() => setShowDetail(true)}>En savoir plus</button>
+        {isAdmin && (
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <button type="button" className="btn btn-ghost btn-sm" onClick={() => setShowEdit(true)}>✏️ Éditer</button>
+            <button type="button" className="btn btn-ghost btn-sm" onClick={toggleArchived} disabled={archiving}>
+              {archiving ? '…' : formateur.archived ? 'Désarchiver' : 'Archiver'}
+            </button>
+          </div>
+        )}
+      </div>
+
+      {showDetail && <FormateurDetailModal formateur={formateur} onClose={() => setShowDetail(false)} />}
+      {showEdit && <FormateurFormModal formateur={formateur} onClose={() => setShowEdit(false)} onSaved={onSaved} />}
+    </div>
+  );
+}
+
 function FormateursPreferences({ formateurs, onCreated, onUpdated, onDeleted }) {
   const [showAdd, setShowAdd] = useState(false);
   const [editingId, setEditingId] = useState(null);
@@ -1872,22 +1991,7 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
             </div>
             <div className="formateurs-grid">
               {formateurs.map((f) => (
-                <div className="card formateur-card" key={f.id}>
-                  {f.photoUrl ? (
-                    <img src={f.photoUrl} alt={f.name} className="formateur-photo" />
-                  ) : (
-                    <div className="formateur-photo formateur-photo-placeholder"><Icon name="user" size={26} /></div>
-                  )}
-                  <div className="formateur-name">{f.name}</div>
-                  {f.specialties && (
-                    <div className="formateur-tags">
-                      {f.specialties.split(',').map((s) => s.trim()).filter(Boolean).map((s) => (
-                        <span className="badge badge-blue" key={s}>{s}</span>
-                      ))}
-                    </div>
-                  )}
-                  {f.bio && <p className="formateur-bio">{f.bio}</p>}
-                </div>
+                <FormateurCard key={f.id} formateur={f} isAdmin={isAdmin} onSaved={updateFormateurInList} />
               ))}
             </div>
           </section>
@@ -2087,7 +2191,7 @@ export async function getServerSideProps(ctx) {
       isAdmin ? getAllTopics() : getVisibleTopics(),
       getSiteContent(),
       getClosedDates(),
-      getAllFormateurs(),
+      isAdmin ? getAllFormateurs() : getVisibleFormateurs(),
     ]);
     return {
       props: {
