@@ -2272,10 +2272,12 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
   const [topicPage, setTopicPage] = useState(1); // pagination du catalogue (TOPICS_PAGE_SIZE par page)
   const [draggingTopicId, setDraggingTopicId] = useState(null); // id de la carte en cours de glisser-déposer (réorganisation "En vedette")
   const [draggingFormateurId, setDraggingFormateurId] = useState(null); // idem pour la grille "Nos formateurs"
+  const [draggingSessionId, setDraggingSessionId] = useState(null); // idem pour "Événements à venir"
   // Le glisser-déposer ne fait sens que sur l'ordre manuel complet et non
   // filtré (tri "En vedette", aucun filtre actif) — sinon la position visuelle
   // ne correspond plus à un ordre qu'on peut réellement persister.
   const topicReorderEnabled = isAdmin && topicSort === '' && topicTypeFilter.length === 0 && topicCategoryFilter.length === 0 && topicStatusFilter.length === 0;
+  const sessionReorderEnabled = isAdmin && sessionsView === 'liste' && sessionSort === '' && sessionTypeFilter.length === 0 && sessionCategoryFilter.length === 0;
   // Revenir à la page 1 dès que le filtre ou le tri change, pour ne pas rester
   // bloqué sur une page qui n'existe plus dans la nouvelle liste.
   useEffect(() => {
@@ -2385,11 +2387,16 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
     }).catch(() => {});
   }
 
-  const sortedSessions = [...sessions].sort((a, b) =>
-    sessionSort === 'date'
-      ? a.dateIso.localeCompare(b.dateIso)
-      : b.rate - a.rate || a.dateIso.localeCompare(b.dateIso)
-  );
+  // '' = "En vedette" (ordre manuel, sort_order — déjà l'ordre renvoyé par
+  // getOpenSessions, donc on ne re-trie pas dans ce cas pour ne pas défaire le
+  // glisser-déposer).
+  const sortedSessions = sessionSort === ''
+    ? [...sessions]
+    : [...sessions].sort((a, b) =>
+        sessionSort === 'date'
+          ? a.dateIso.localeCompare(b.dateIso)
+          : b.rate - a.rate || a.dateIso.localeCompare(b.dateIso)
+      );
   const visibleSessions = sortedSessions
     .filter((s) => !sessionTypeFilter.length || sessionTypeFilter.includes(s.topic?.type || 'Formation'))
     .filter((s) => !sessionCategoryFilter.length || sessionCategoryFilter.includes(s.topic?.category));
@@ -2452,6 +2459,24 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
     const newFormateurs = order.map((id) => formateurs.find((f) => f.id === id));
     setFormateurs(newFormateurs);
     fetch('/api/admin/formateurs/reorder', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ orderedIds: order }),
+    }).catch(() => {});
+  }
+
+  // Glisser-déposer des sessions ("Événements à venir"), tri "En vedette" —
+  // même logique que handleFormateurDrop (pas de pagination ici non plus).
+  function handleSessionDrop(droppedId, targetId) {
+    if (!sessionReorderEnabled || droppedId === targetId) return;
+    const order = sessions.map((s) => s.id);
+    const fromIdx = order.indexOf(droppedId);
+    const toIdx = order.indexOf(targetId);
+    if (fromIdx === -1 || toIdx === -1) return;
+    order.splice(toIdx, 0, order.splice(fromIdx, 1)[0]);
+    const newSessions = order.map((id) => sessions.find((s) => s.id === id));
+    setSessions(newSessions);
+    fetch('/api/admin/sessions/reorder', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ orderedIds: order }),
@@ -2718,6 +2743,7 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
                     <span className="sort-label">Trier par :</span>
                     <div className="sort-select-wrap">
                       <select className="sort-select" value={sessionSort} onChange={(e) => setSessionSort(e.target.value)}>
+                        <option value="">En vedette</option>
                         <option value="rate">Taux de remplissage</option>
                         <option value="date">Date</option>
                       </select>
@@ -2783,32 +2809,43 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
                 );
 
                 return (
-                  <div className="chart-row" key={s.id}>
-                    <div className="meta">
-                      <ImgPlaceholder className="session-thumb" iconSize={18} />
-                      <div className="meta-text">
-                        <div className="date-label"><Icon name="calendar" size={13} /> {s.dateLabel}</div>
-                        <div className="topic-title">{s.topic.title}</div>
-                        <div className="topic-meta">{s.topic.type || 'Formation'} · {formatPrice(s.topic.price)}</div>
+                  <div
+                    key={s.id}
+                    draggable={sessionReorderEnabled}
+                    onDragStart={() => setDraggingSessionId(s.id)}
+                    onDragOver={(e) => { if (sessionReorderEnabled) e.preventDefault(); }}
+                    onDrop={() => { if (draggingSessionId) handleSessionDrop(draggingSessionId, s.id); setDraggingSessionId(null); }}
+                    onDragEnd={() => setDraggingSessionId(null)}
+                    className={sessionReorderEnabled ? 'topic-card-draggable' : undefined}
+                    style={draggingSessionId === s.id ? { opacity: 0.4 } : undefined}
+                  >
+                    <div className="chart-row">
+                      <div className="meta">
+                        <ImgPlaceholder className="session-thumb" iconSize={18} />
+                        <div className="meta-text">
+                          <div className="date-label"><Icon name="calendar" size={13} /> {s.dateLabel}</div>
+                          <div className="topic-title">{s.topic.title}</div>
+                          <div className="topic-meta">{s.topic.type || 'Formation'} · {formatPrice(s.topic.price)}</div>
+                        </div>
                       </div>
-                    </div>
-                    <div className="bar-col">
-                      <div className="bar-track">
-                        <div className={`bar-fill ${s.validated ? 'full' : ''}`} style={{ width: `${pct}%` }} />
+                      <div className="bar-col">
+                        <div className="bar-track">
+                          <div className={`bar-fill ${s.validated ? 'full' : ''}`} style={{ width: `${pct}%` }} />
+                        </div>
+                        <div className="bar-count">
+                          {s.count}/{s.capacity} inscrits · {s.validated ? 'Session confirmée' : `Plus que ${Math.max(0, s.threshold - s.count)} pour confirmer`}
+                        </div>
                       </div>
-                      <div className="bar-count">
-                        {s.count}/{s.capacity} inscrits · {s.validated ? 'Session confirmée' : `Plus que ${Math.max(0, s.threshold - s.count)} pour confirmer`}
+                      <div className="action">
+                        {badge}
+                        <button
+                          className="btn btn-primary btn-sm"
+                          disabled={isFull}
+                          onClick={() => openModal(s.topicId, s.dateIso)}
+                        >
+                          {isFull ? 'Complet' : <>S'inscrire <Icon name="arrowRight" size={14} /></>}
+                        </button>
                       </div>
-                    </div>
-                    <div className="action">
-                      {badge}
-                      <button
-                        className="btn btn-primary btn-sm"
-                        disabled={isFull}
-                        onClick={() => openModal(s.topicId, s.dateIso)}
-                      >
-                        {isFull ? 'Complet' : <>S'inscrire <Icon name="arrowRight" size={14} /></>}
-                      </button>
                     </div>
                   </div>
                 );
