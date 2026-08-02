@@ -426,11 +426,11 @@ footer.page-footer { color: var(--text-muted); font-size: 13px; padding-top: 20p
 
 /* ─── Icône compte (fixe, haut de page — aligné sur le pictogramme filme.fr) ── */
 
-/* Aligné sur la marge droite de .page (15px mobile / 50px à partir de 750px) */
-.user-menu { position: fixed; top: 16px; right: 15px; z-index: 60; }
-@media screen and (min-width: 750px) {
-  .user-menu { right: 50px; }
-}
+/* Aligné sur la marge droite réelle de .page — qui est centrée (max-width
+   1200px) et non collée au bord de la fenêtre. Le calcul suit le bord droit
+   du contenu (50vw - 600px) + les 50px de padding de .page ; sur les petits
+   écrans où .page n'est pas centrée, on retombe sur son padding (15px). */
+.user-menu { position: fixed; top: 16px; right: max(15px, calc(50vw - 550px)); z-index: 60; }
 .user-menu-icon {
   background: none;
   border: none;
