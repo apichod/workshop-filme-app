@@ -288,12 +288,12 @@ h1, h2, h3, .section-head h2, .topic-card h3 { font-family: var(--font-heading-f
   width: 100%;
   padding: 48px 15px;
   /* Hauteur FIXE (pas min-height) quel que soit le contenu de la bannière
-     active (titre plus ou moins long, CTA présent ou non, etc.) — toutes les
-     bannières du carrousel ont donc rigoureusement la même hauteur ; un
-     contenu trop long est simplement contenu (overflow hidden) plutôt que
-     d'agrandir le bandeau. */
+     active — toutes les bannières du carrousel ont donc rigoureusement la
+     même hauteur. Pas d'overflow:hidden ici (ça coupait le sélecteur d'icône
+     et d'autres menus déroulants de l'édition admin) : c'est le titre et le
+     texte eux-mêmes qui sont bornés à N lignes ci-dessous (line-clamp), pas
+     le bandeau entier. */
   height: 440px;
-  overflow: hidden;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -311,10 +311,18 @@ h1, h2, h3, .section-head h2, .topic-card h3 { font-family: var(--font-heading-f
   color: #fff;
   max-width: 620px;
   margin-bottom: 14px;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
 }
 .hero-banner p.lead {
   color: rgba(255, 255, 255, 0.75);
   font-size: 16px;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
   max-width: 560px;
   margin-bottom: 28px;
 }
