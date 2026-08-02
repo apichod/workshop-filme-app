@@ -1100,6 +1100,7 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
   const [topics, setTopics] = useState(initialTopics);
   const [content, setContent] = useState(initialContent);
   const [modal, setModal] = useState(null); // { topicId, dates: string[] }
+  const [showModalTopicDetail, setShowModalTopicDetail] = useState(false);
   const [form, setForm] = useState({ name: '', email: '' });
   const [status, setStatus] = useState({ loading: false, error: '', results: [] });
   const [showTerms, setShowTerms] = useState(false);
@@ -1555,6 +1556,16 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
                     <option key={t.id} value={t.id}>{t.title}</option>
                   ))}
                 </select>
+                {modalTopic && (
+                  <button
+                    type="button"
+                    className="link-btn"
+                    style={{ marginTop: 6 }}
+                    onClick={() => setShowModalTopicDetail(true)}
+                  >
+                    En savoir plus
+                  </button>
+                )}
               </div>
 
               {modalTopic?.fixedDate ? (
@@ -1638,6 +1649,14 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
             </form>
           </div>
         </div>
+      )}
+
+      {showModalTopicDetail && modalTopic && (
+        <TopicDetailModal
+          topic={modalTopic}
+          onClose={() => setShowModalTopicDetail(false)}
+          onRegister={() => {}}
+        />
       )}
 
       {showTerms && (
