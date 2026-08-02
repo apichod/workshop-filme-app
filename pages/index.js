@@ -88,6 +88,8 @@ function emptyTopicForm(topic) {
     category: topic?.category || '',
     type: topic?.type || 'Formation',
     bonus: topic?.bonus || '',
+    maxParticipants: topic?.maxParticipants ? String(topic.maxParticipants) : '',
+    equipment: topic?.equipment || '',
   };
 }
 
@@ -169,6 +171,11 @@ function TopicFormModal({ mode, topic, onClose, onSaved }) {
             <textarea className="form-input" rows={5} value={form.program} onChange={(e) => set('program', e.target.value)} placeholder={'Une ligne par étape, ex :\n1. Prise en main du matériel\n2. Exercices pratiques\n3. Debrief'} />
           </div>
 
+          <div className="form-group">
+            <label className="form-label">Matériel mis à disposition</label>
+            <textarea className="form-input" rows={4} value={form.equipment} onChange={(e) => set('equipment', e.target.value)} placeholder={'Une ligne par élément, ex :\nCaméra cinéma\nOptiques\nTrépied'} />
+          </div>
+
           <div style={{ display: 'flex', gap: 12 }}>
             <div className="form-group" style={{ flex: 1 }}>
               <label className="form-label">Niveau</label>
@@ -181,6 +188,17 @@ function TopicFormModal({ mode, topic, onClose, onSaved }) {
             <div className="form-group" style={{ flex: 1 }}>
               <label className="form-label">Durée</label>
               <input className="form-input" value={form.duration} onChange={(e) => set('duration', e.target.value)} placeholder="Sinon : 1 journée (9h–18h)" />
+            </div>
+            <div className="form-group" style={{ flex: 1 }}>
+              <label className="form-label">Participants max</label>
+              <input
+                className="form-input"
+                type="number"
+                min={1}
+                value={form.maxParticipants}
+                onChange={(e) => set('maxParticipants', e.target.value)}
+                placeholder={`Sinon : ${CAPACITY}`}
+              />
             </div>
           </div>
 
@@ -209,6 +227,7 @@ function TopicFormModal({ mode, topic, onClose, onSaved }) {
 // ─── Popup public "En savoir plus" ────────────────────────────────────────────
 function TopicDetailModal({ topic, onClose, onRegister }) {
   const programLines = (topic.program || '').split('\n').map((l) => l.trim()).filter(Boolean);
+  const equipmentLines = (topic.equipment || '').split('\n').map((l) => l.trim()).filter(Boolean);
 
   return (
     <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
@@ -221,7 +240,7 @@ function TopicDetailModal({ topic, onClose, onRegister }) {
         )}
         <h2>{topic.title}</h2>
         <div className="level" style={{ marginTop: 4 }}>
-          {[topic.level, topic.price || PRICE_LABEL, topic.duration || '1 journée (9h–18h)'].filter(Boolean).join(' · ')}
+          {[topic.level, topic.price || PRICE_LABEL, topic.duration || '1 journée (9h–18h)', `${topic.maxParticipants || CAPACITY} participants max`].filter(Boolean).join(' · ')}
         </div>
         {topic.bonus && (
           <div className="bonus-note" style={{ marginTop: 10 }}>🎁 {topic.bonus}</div>
@@ -238,6 +257,15 @@ function TopicDetailModal({ topic, onClose, onRegister }) {
             <h3 style={{ fontSize: 15, marginTop: 20, marginBottom: 8 }}>Programme</h3>
             <ul style={{ margin: 0, paddingLeft: 20, fontSize: 14, color: 'var(--text)', lineHeight: 1.8 }}>
               {programLines.map((line, i) => <li key={i}>{line}</li>)}
+            </ul>
+          </>
+        )}
+
+        {equipmentLines.length > 0 && (
+          <>
+            <h3 style={{ fontSize: 15, marginTop: 20, marginBottom: 8 }}>Matériel mis à disposition</h3>
+            <ul style={{ margin: 0, paddingLeft: 20, fontSize: 14, color: 'var(--text)', lineHeight: 1.8 }}>
+              {equipmentLines.map((line, i) => <li key={i}>{line}</li>)}
             </ul>
           </>
         )}
@@ -724,6 +752,7 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
       ? a.dateIso.localeCompare(b.dateIso)
       : b.rate - a.rate || a.dateIso.localeCompare(b.dateIso)
   );
+  const modalTopic = modal ? topics.find((t) => t.id === modal.topicId) : null;
 
   function updateTopicInList(updated) {
     setTopics((list) => list.map((t) => (t.id === updated.id ? updated : t)));
@@ -1064,7 +1093,7 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
           <div className="modal">
             <button className="modal-close" onClick={closeModal}>✕</button>
             <h2>S'inscrire à un workshop</h2>
-            <div className="modal-sub">{PRICE_LABEL} — {CAPACITY} places maximum · vous pouvez cocher plusieurs samedis pour la même formation</div>
+            <div className="modal-sub">{modalTopic?.price || PRICE_LABEL} — {modalTopic?.maxParticipants || CAPACITY} places maximum · vous pouvez cocher plusieurs samedis pour la même formation</div>
 
             <form onSubmit={submit}>
               <div className="form-group">

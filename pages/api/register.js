@@ -18,6 +18,7 @@ export default async function handler(req, res) {
   try {
     const topic = await getTopicById(topicId);
     if (!topic) return res.status(400).json({ error: 'Formation inconnue' });
+    const capacity = topic.maxParticipants || CAPACITY;
 
     // ─── Ce samedi a-t-il été fermé aux inscriptions (préférences admin) ? ───
     if (await isDateClosed(dateIso)) return res.status(400).json({ error: 'date_closed' });
@@ -66,7 +67,7 @@ export default async function handler(req, res) {
     if (countErr) throw countErr;
     // Une session validée (>= seuil) reste ouverte aux inscriptions jusqu'à la
     // capacité max — seule la capacité bloque, pas la validation.
-    if ((count || 0) >= CAPACITY) return res.status(409).json({ error: 'full' });
+    if ((count || 0) >= capacity) return res.status(409).json({ error: 'full' });
 
     // ─── Inscription (unique par session+email, cf. supabase.sql) ───
     const { error: insertErr } = await supabaseAdmin
@@ -107,7 +108,7 @@ export default async function handler(req, res) {
       ok: true,
       count: newCount,
       validated: nowValidated,
-      full: newCount >= CAPACITY,
+      full: newCount >= capacity,
     });
   } catch (err) {
     console.error('[api/register]', err);
