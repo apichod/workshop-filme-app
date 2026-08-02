@@ -113,10 +113,12 @@ function scheduleLabel(topic) {
 }
 
 // Catégorie utilisée par le filtre "Statut" (Formations disponibles) : une
-// formation à date fixe est "Programmée", les autres suivent un planning
-// récurrent (mercredis/vendredis/samedis) donc "Date flexible".
-function topicStatusLabel(topic) {
-  return topic.scheduleMode === 'fixed' ? 'Programmé' : 'Date flexible';
+// formation à date fixe est "Programmée", tout comme une formation à planning
+// flexible dont une session a déjà atteint le seuil de validation (elle a
+// donc, elle aussi, une date confirmée) — les autres restent "Date flexible".
+function topicStatusLabel(topic, sessions) {
+  const hasValidatedSession = sessions.some((s) => s.topicId === topic.id && s.validated);
+  return topic.scheduleMode === 'fixed' || hasValidatedSession ? 'Programmé' : 'Date flexible';
 }
 
 // ─── Texte éditable en place (mode admin uniquement) ─────────────────────────
@@ -1204,7 +1206,7 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
   const selectableTopics = topics.filter((t) => !t.archived);
   const usedSessionTypes = [...new Set(sessions.map((s) => s.topic?.type || 'Formation'))];
   const usedTopicTypes = [...new Set(topics.map((t) => t.type || 'Formation'))];
-  const usedTopicStatuses = [...new Set(topics.map((t) => topicStatusLabel(t)))];
+  const usedTopicStatuses = [...new Set(topics.map((t) => topicStatusLabel(t, sessions)))];
   // Nombre total d'inscrits (toutes sessions à venir confondues) par formation
   // — sert de proxy à "Les plus demandées".
   const topicPopularity = new Map();
@@ -1213,7 +1215,7 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
   });
   const filteredTopics = topics
     .filter((t) => !topicTypeFilter.length || topicTypeFilter.includes(t.type || 'Formation'))
-    .filter((t) => !topicStatusFilter.length || topicStatusFilter.includes(topicStatusLabel(t)));
+    .filter((t) => !topicStatusFilter.length || topicStatusFilter.includes(topicStatusLabel(t, sessions)));
   if (topicSort === 'newest') filteredTopics.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
   else if (topicSort === 'price_desc') filteredTopics.sort((a, b) => parsePriceValue(b.price) - parsePriceValue(a.price));
   else if (topicSort === 'price_asc') filteredTopics.sort((a, b) => parsePriceValue(a.price) - parsePriceValue(b.price));
