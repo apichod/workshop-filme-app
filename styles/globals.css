@@ -314,6 +314,52 @@ h1, h2, h3, .section-head h2, .topic-card h3 { font-family: var(--font-heading-f
 .stat-item strong { display: block; font-size: 14px; font-weight: 600; color: #fff; }
 .stat-item span { display: block; font-size: 12.5px; color: rgba(255, 255, 255, 0.55); }
 
+/* ─── Bannières Hero n°2/3 (meetups, démos produits...) ────────────────────── */
+.hero-price-badge {
+  display: inline-block;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: #fff;
+  font-weight: 600;
+  font-size: 14px;
+  padding: 6px 16px;
+  border-radius: 999px;
+  margin-bottom: 20px;
+  cursor: default;
+}
+.hero-bullets { display: flex; flex-direction: column; gap: 10px; list-style: none; padding: 0; margin: 0; }
+.hero-bullets li { display: flex; align-items: center; gap: 10px; color: rgba(255, 255, 255, 0.85); font-size: 14px; }
+.hero-bullets li svg { color: #e8ab5c; flex-shrink: 0; }
+
+/* ─── Navigation du carrousel Hero (dots + flèches) ────────────────────────── */
+.hero-dots { position: absolute; left: 0; right: 0; bottom: 18px; display: flex; justify-content: center; gap: 8px; z-index: 2; }
+.hero-dot { width: 8px; height: 8px; border-radius: 50%; background: rgba(255, 255, 255, 0.35); border: none; padding: 0; cursor: pointer; }
+.hero-dot.active { background: #fff; }
+.hero-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: #fff;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.hero-arrow:hover { background: rgba(0, 0, 0, 0.55); }
+.hero-arrow-prev { left: 16px; }
+.hero-arrow-next { right: 16px; }
+@media screen and (max-width: 600px) {
+  .hero-arrow { width: 30px; height: 30px; font-size: 16px; }
+}
+
 .img-placeholder {
   background: linear-gradient(135deg, #e6e6e6, #d2d2d2);
   color: #9a9a9a;

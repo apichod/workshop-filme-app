@@ -18,6 +18,25 @@ function ImgPlaceholder({ className, iconSize = 22 }) {
   );
 }
 
+// ─── Bannière Hero n°2/3 — titre + texte + prix + liste à puces, éditables ───
+function HeroInfoSlide({ isAdmin, content, saveContent, titleKey, leadKey, priceKey, bulletKeys }) {
+  return (
+    <div className="hero-copy">
+      <EditableText isAdmin={isAdmin} tag="h1" value={content[titleKey]} onSave={(v) => saveContent(titleKey, v)} />
+      <EditableText isAdmin={isAdmin} tag="p" className="lead" multiline value={content[leadKey]} onSave={(v) => saveContent(leadKey, v)} />
+      <EditableText isAdmin={isAdmin} tag="div" className="hero-price-badge" value={content[priceKey]} onSave={(v) => saveContent(priceKey, v)} />
+      <ul className="hero-bullets">
+        {bulletKeys.map((k) => (
+          <li key={k}>
+            <Icon name="check" size={14} />
+            <EditableText isAdmin={isAdmin} tag="span" value={content[k]} onSave={(v) => saveContent(k, v)} />
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 // ─── Couleurs par catégorie — badges + filtres (repérage visuel rapide) ──────
 const CATEGORY_STYLES = {
   Image: { badgeClass: 'badge-cat-image', color: '#2B80FF' },
@@ -1099,6 +1118,7 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
   const [sessions, setSessions] = useState(initialSessions);
   const [topics, setTopics] = useState(initialTopics);
   const [content, setContent] = useState(initialContent);
+  const [heroSlide, setHeroSlide] = useState(0);
   const [modal, setModal] = useState(null); // { topicId, dates: string[] }
   const [showModalTopicDetail, setShowModalTopicDetail] = useState(false);
   const [form, setForm] = useState({ name: '', email: '' });
@@ -1313,28 +1333,67 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
           <ImgPlaceholder iconSize={40} />
         </div>
         <div className="hero-banner-inner">
-          <div className="hero-copy">
-            <EditableText isAdmin={isAdmin} tag="h1" value={content.hero_title} onSave={(v) => saveContent('hero_title', v)} />
-            <EditableText isAdmin={isAdmin} tag="p" className="lead" multiline value={content.hero_lead} onSave={(v) => saveContent('hero_lead', v)} />
-            <div className="hero-stats">
-              <div className="stat-item">
-                <span className="icon-wrap"><Icon name="price" /></span>
-                <EditableText isAdmin={isAdmin} tag="strong" value={content.price_label} onSave={(v) => saveContent('price_label', v)} />
-              </div>
-              <div className="stat-item">
-                <span className="icon-wrap"><Icon name="users" /></span>
-                <EditableText isAdmin={isAdmin} tag="strong" value={content.pill_capacity} onSave={(v) => saveContent('pill_capacity', v)} />
-              </div>
-              <div className="stat-item">
-                <span className="icon-wrap"><Icon name="check" /></span>
-                <EditableText isAdmin={isAdmin} tag="strong" value={content.pill_validation} onSave={(v) => saveContent('pill_validation', v)} />
-              </div>
-              <div className="stat-item">
-                <span className="icon-wrap"><Icon name="shield" /></span>
-                <EditableText isAdmin={isAdmin} tag="strong" value={content.pill_audience} onSave={(v) => saveContent('pill_audience', v)} />
+          {heroSlide === 0 && (
+            <div className="hero-copy">
+              <EditableText isAdmin={isAdmin} tag="h1" value={content.hero_title} onSave={(v) => saveContent('hero_title', v)} />
+              <EditableText isAdmin={isAdmin} tag="p" className="lead" multiline value={content.hero_lead} onSave={(v) => saveContent('hero_lead', v)} />
+              <div className="hero-stats">
+                <div className="stat-item">
+                  <span className="icon-wrap"><Icon name="price" /></span>
+                  <EditableText isAdmin={isAdmin} tag="strong" value={content.price_label} onSave={(v) => saveContent('price_label', v)} />
+                </div>
+                <div className="stat-item">
+                  <span className="icon-wrap"><Icon name="users" /></span>
+                  <EditableText isAdmin={isAdmin} tag="strong" value={content.pill_capacity} onSave={(v) => saveContent('pill_capacity', v)} />
+                </div>
+                <div className="stat-item">
+                  <span className="icon-wrap"><Icon name="check" /></span>
+                  <EditableText isAdmin={isAdmin} tag="strong" value={content.pill_validation} onSave={(v) => saveContent('pill_validation', v)} />
+                </div>
+                <div className="stat-item">
+                  <span className="icon-wrap"><Icon name="shield" /></span>
+                  <EditableText isAdmin={isAdmin} tag="strong" value={content.pill_audience} onSave={(v) => saveContent('pill_audience', v)} />
+                </div>
               </div>
             </div>
-          </div>
+          )}
+          {heroSlide === 1 && (
+            <HeroInfoSlide
+              isAdmin={isAdmin}
+              content={content}
+              saveContent={saveContent}
+              titleKey="hero2_title"
+              leadKey="hero2_lead"
+              priceKey="hero2_price"
+              bulletKeys={['hero2_bullet_1', 'hero2_bullet_2', 'hero2_bullet_3', 'hero2_bullet_4']}
+            />
+          )}
+          {heroSlide === 2 && (
+            <HeroInfoSlide
+              isAdmin={isAdmin}
+              content={content}
+              saveContent={saveContent}
+              titleKey="hero3_title"
+              leadKey="hero3_lead"
+              priceKey="hero3_price"
+              bulletKeys={['hero3_bullet_1', 'hero3_bullet_2', 'hero3_bullet_3', 'hero3_bullet_4']}
+            />
+          )}
+        </div>
+
+        <button type="button" className="hero-arrow hero-arrow-prev" onClick={() => setHeroSlide((s) => (s + 2) % 3)} aria-label="Bannière précédente">‹</button>
+        <button type="button" className="hero-arrow hero-arrow-next" onClick={() => setHeroSlide((s) => (s + 1) % 3)} aria-label="Bannière suivante">›</button>
+
+        <div className="hero-dots">
+          {[0, 1, 2].map((i) => (
+            <button
+              key={i}
+              type="button"
+              className={`hero-dot ${heroSlide === i ? 'active' : ''}`}
+              onClick={() => setHeroSlide(i)}
+              aria-label={`Aller à la bannière ${i + 1}`}
+            />
+          ))}
         </div>
       </section>
 
