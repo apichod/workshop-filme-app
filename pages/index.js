@@ -775,6 +775,27 @@ function NewTopicCard({ onCreated, formateurs }) {
   );
 }
 
+// ─── Carte "+ Nouveau formateur" (admin uniquement) ──────────────────────────
+function NewFormateurCard({ onCreated }) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <>
+      <button
+        type="button"
+        className="card formateur-card"
+        style={{ alignItems: 'center', justifyContent: 'center', border: '1px dashed var(--border)', boxShadow: 'none', cursor: 'pointer', minHeight: 160 }}
+        onClick={() => setOpen(true)}
+      >
+        <span style={{ fontWeight: 700, color: 'var(--accent)' }}>+ Nouveau formateur</span>
+      </button>
+      {open && (
+        <FormateurFormModal formateur={null} onClose={() => setOpen(false)} onSaved={onCreated} />
+      )}
+    </>
+  );
+}
+
 // ─── Popup admin export / import JSON des formations ("log") ─────────────────
 function TopicsJsonModal({ topics, onClose, onImported }) {
   const [tab, setTab] = useState('export');
@@ -1648,8 +1669,8 @@ function FormateurForm({ formateur, onCancel, onSaved, topics, onTopicUpdated, b
   );
 }
 
-// Popup d'édition d'un formateur depuis sa carte homepage (réutilise
-// FormateurForm, déjà utilisé "en ligne" dans Préférences → Formateurs).
+// Popup d'édition (ou de création, si `formateur` est vide) d'un formateur —
+// réutilise FormateurForm, déjà utilisé "en ligne" dans Préférences → Formateurs.
 function FormateurFormModal({ formateur, onClose, onSaved, topics, onTopicUpdated }) {
   const [showJson, setShowJson] = useState(false);
   return (
@@ -1667,7 +1688,7 @@ function FormateurFormModal({ formateur, onClose, onSaved, topics, onTopicUpdate
             ⇅ Export / Import JSON
           </button>
         )}
-        <h2>Éditer le formateur</h2>
+        <h2>{formateur ? 'Éditer le formateur' : 'Nouveau formateur'}</h2>
         <div style={{ marginTop: 16 }}>
           <FormateurForm
             formateur={formateur}
@@ -3008,7 +3029,7 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
           )}
         </section>
 
-        {formateurs.length > 0 && (
+        {(formateurs.length > 0 || isAdmin) && (
           <section className="section">
             <div className="section-head">
               <div>
@@ -3031,6 +3052,7 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
                   <FormateurCard formateur={f} isAdmin={isAdmin} onSaved={updateFormateurInList} topics={topics} onTopicUpdated={updateTopicInList} />
                 </div>
               ))}
+              {isAdmin && <NewFormateurCard onCreated={addFormateurToList} />}
             </div>
           </section>
         )}
