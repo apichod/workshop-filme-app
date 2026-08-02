@@ -323,7 +323,7 @@ function TopicDetailModal({ topic, onClose, onRegister }) {
         )}
         <h2>{topic.title}</h2>
         <div className="level" style={{ marginTop: 4 }}>
-          {[topic.level, formatPrice(topic.price), topic.duration || '1 journée (9h–18h)', `${topic.maxParticipants || CAPACITY} participants max`].filter(Boolean).join(' · ')}
+          {[formatPrice(topic.price), topic.level, topic.duration || '1 journée (9h–18h)', `${topic.maxParticipants || CAPACITY} participants max`].filter(Boolean).join(' · ')}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 13, color: 'var(--text-muted)', marginTop: 3 }}>
           <Icon name="calendar" size={13} /> {scheduleLabel(topic)}
@@ -424,7 +424,7 @@ function TopicCard({ topic, index, isAdmin, onOpenRegister, onSaved, onDeleted, 
       <p>{topic.desc}</p>
       {topic.bonus && <div className="bonus-note">🎁 {topic.bonus}</div>}
       <div>
-        <div className="level">{[topic.level, formatPrice(topic.price), topic.duration || '1 journée (9h–18h)'].filter(Boolean).join(' · ')}</div>
+        <div className="level">{[formatPrice(topic.price), topic.level, topic.duration || '1 journée (9h–18h)'].filter(Boolean).join(' · ')}</div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, color: 'var(--text-muted)', marginTop: 3 }}>
           <Icon name="calendar" size={12} /> {scheduleLabel(topic)}
         </div>
