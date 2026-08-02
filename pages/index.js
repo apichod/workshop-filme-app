@@ -1095,15 +1095,96 @@ function normalizeAvailability(a) {
   const base = {};
   WEEKDAYS.forEach((d) => { base[d.key] = Array.isArray(a?.[d.key]) ? a[d.key] : []; });
   base.dates = Array.isArray(a?.dates) ? a.dates : [];
+  base.dateOverrides = Array.isArray(a?.dateOverrides) ? a.dateOverrides : [];
   return base;
 }
 
-// Éditeur "agenda" des disponibilités : un ou plusieurs créneaux horaires
-// (heures rondes) par jour de la semaine, récurrents chaque semaine, plus un
-// calendrier pour ajouter des dates ponctuelles de disponibilité.
+const CAL_MONTH_LABELS = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+const CAL_WEEKDAY_LABELS = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
+
+function toIsoLocal(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+function buildMonthCells(monthDate) {
+  const year = monthDate.getFullYear();
+  const month = monthDate.getMonth();
+  const offset = (new Date(year, month, 1).getDay() + 6) % 7; // lundi = 0
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const cells = [];
+  for (let i = 0; i < offset; i++) cells.push(null);
+  for (let d = 1; d <= daysInMonth; d++) cells.push(new Date(year, month, d));
+  return cells;
+}
+
+// Petit calendrier mensuel : on clique sur un jour pour le marquer (ou
+// démarquer) comme disponible — le jour sélectionné s'affiche avec une croix.
+function AvailabilityCalendar({ dates, onToggle }) {
+  const [monthDate, setMonthDate] = useState(() => { const d = new Date(); d.setDate(1); d.setHours(0, 0, 0, 0); return d; });
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const cells = buildMonthCells(monthDate);
+  const selectedSet = new Set(dates || []);
+
+  return (
+    <div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+        <button type="button" className="btn btn-ghost btn-sm" onClick={() => setMonthDate((m) => new Date(m.getFullYear(), m.getMonth() - 1, 1))}>‹</button>
+        <div style={{ fontSize: 13, fontWeight: 600 }}>{CAL_MONTH_LABELS[monthDate.getMonth()]} {monthDate.getFullYear()}</div>
+        <button type="button" className="btn btn-ghost btn-sm" onClick={() => setMonthDate((m) => new Date(m.getFullYear(), m.getMonth() + 1, 1))}>›</button>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4, fontSize: 11, color: 'var(--text-muted)', textAlign: 'center', marginBottom: 4 }}>
+        {CAL_WEEKDAY_LABELS.map((l) => <div key={l}>{l}</div>)}
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4 }}>
+        {cells.map((d, i) => {
+          if (!d) return <div key={`empty-${i}`} />;
+          const iso = toIsoLocal(d);
+          const isPast = d < today;
+          const isSelected = selectedSet.has(iso);
+          const isToday = d.getTime() === today.getTime();
+          return (
+            <button
+              key={iso}
+              type="button"
+              disabled={isPast}
+              onClick={() => onToggle(iso)}
+              title={isSelected ? 'Retirer cette date de disponibilité' : 'Marquer disponible'}
+              style={{
+                aspectRatio: '1',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderRadius: 6,
+                fontSize: 12,
+                cursor: isPast ? 'default' : 'pointer',
+                border: isToday ? '1px solid var(--red)' : '1px solid var(--border)',
+                background: isSelected ? '#e8ab5c' : 'transparent',
+                color: isSelected ? '#fff' : isPast ? 'var(--text-muted)' : 'var(--text)',
+                opacity: isPast ? 0.4 : 1,
+              }}
+            >
+              {isSelected ? '✕' : d.getDate()}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// Éditeur "agenda" des disponibilités :
+// - créneaux horaires récurrents chaque semaine (heures rondes) par jour ;
+// - un calendrier pour cocher des dates ponctuelles disponibles (sans horaire précis) ;
+// - des "dates spécifiques" avec un horaire particulier, qui remplace les deux
+//   règles ci-dessus pour cette date précise.
 function AvailabilityEditor({ value, onChange }) {
+  const [addingDay, setAddingDay] = useState(null);
   const [drafts, setDrafts] = useState(() => WEEKDAYS.reduce((acc, d) => ({ ...acc, [d.key]: { start: '', end: '' } }), {}));
-  const [dateDraft, setDateDraft] = useState('');
+  const [overrideDraft, setOverrideDraft] = useState({ date: '', start: '', end: '' });
 
   function setDraft(day, field, v) {
     setDrafts((d) => ({ ...d, [day]: { ...d[day], [field]: v } }));
@@ -1115,6 +1196,7 @@ function AvailabilityEditor({ value, onChange }) {
     const dayList = value[day] || [];
     onChange({ ...value, [day]: [...dayList, { start, end }].sort((a, b) => a.start.localeCompare(b.start)) });
     setDrafts((d) => ({ ...d, [day]: { start: '', end: '' } }));
+    setAddingDay(null);
   }
 
   function removeSlot(day, idx) {
@@ -1123,18 +1205,24 @@ function AvailabilityEditor({ value, onChange }) {
     onChange({ ...value, [day]: dayList });
   }
 
-  function addDate() {
-    if (!dateDraft) return;
+  function toggleDate(iso) {
     const dates = value.dates || [];
-    if (dates.includes(dateDraft)) { setDateDraft(''); return; }
-    onChange({ ...value, dates: [...dates, dateDraft].sort() });
-    setDateDraft('');
+    const next = dates.includes(iso) ? dates.filter((d) => d !== iso) : [...dates, iso].sort();
+    onChange({ ...value, dates: next });
   }
 
-  function removeDate(idx) {
-    const dates = (value.dates || []).slice();
-    dates.splice(idx, 1);
-    onChange({ ...value, dates });
+  function addOverride() {
+    const { date, start, end } = overrideDraft;
+    if (!date || !start || !end || start >= end) return;
+    const overrides = (value.dateOverrides || []).filter((o) => o.date !== date);
+    onChange({ ...value, dateOverrides: [...overrides, { date, start, end }].sort((a, b) => a.date.localeCompare(b.date)) });
+    setOverrideDraft({ date: '', start: '', end: '' });
+  }
+
+  function removeOverride(idx) {
+    const overrides = (value.dateOverrides || []).slice();
+    overrides.splice(idx, 1);
+    onChange({ ...value, dateOverrides: overrides });
   }
 
   return (
@@ -1158,34 +1246,52 @@ function AvailabilityEditor({ value, onChange }) {
                 </span>
               ))}
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-              <select className="form-input" style={{ width: 84, padding: '6px 8px' }} value={drafts[d.key].start} onChange={(e) => setDraft(d.key, 'start', e.target.value)}>
-                <option value="">--</option>
-                {AVAILABILITY_HOURS.map((h) => <option key={h} value={h}>{h}</option>)}
-              </select>
-              <span style={{ color: 'var(--text-muted)' }}>–</span>
-              <select className="form-input" style={{ width: 84, padding: '6px 8px' }} value={drafts[d.key].end} onChange={(e) => setDraft(d.key, 'end', e.target.value)}>
-                <option value="">--</option>
-                {AVAILABILITY_HOURS.map((h) => <option key={h} value={h}>{h}</option>)}
-              </select>
-              <button type="button" className="btn btn-ghost btn-sm" onClick={() => addSlot(d.key)}>+ Ajouter</button>
-            </div>
+            {addingDay === d.key ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <select className="form-input" style={{ width: 84, padding: '6px 8px' }} value={drafts[d.key].start} onChange={(e) => setDraft(d.key, 'start', e.target.value)}>
+                  <option value="">--</option>
+                  {AVAILABILITY_HOURS.map((h) => <option key={h} value={h}>{h}</option>)}
+                </select>
+                <span style={{ color: 'var(--text-muted)' }}>–</span>
+                <select className="form-input" style={{ width: 84, padding: '6px 8px' }} value={drafts[d.key].end} onChange={(e) => setDraft(d.key, 'end', e.target.value)}>
+                  <option value="">--</option>
+                  {AVAILABILITY_HOURS.map((h) => <option key={h} value={h}>{h}</option>)}
+                </select>
+                <button type="button" className="btn btn-ghost btn-sm" onClick={() => addSlot(d.key)}>Ajouter</button>
+                <button type="button" className="btn btn-ghost btn-sm" onClick={() => setAddingDay(null)}>Annuler</button>
+              </div>
+            ) : (
+              <button type="button" className="btn btn-ghost btn-sm" onClick={() => setAddingDay(d.key)}>+ Ajouter un créneau</button>
+            )}
           </div>
         ))}
       </div>
 
       <div style={{ marginTop: 16, paddingTop: 14, borderTop: '1px solid var(--border)' }}>
-        <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>Dates spécifiques</div>
-        {(value.dates || []).length > 0 && (
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
-            {(value.dates || []).map((dateIso, i) => (
-              <span key={dateIso} className="badge badge-blue" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                {formatSaturday(dateIso)}
+        <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>Dates de disponibilité</div>
+        <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 8 }}>
+          Cliquez sur les jours du calendrier où il est disponible, en plus des créneaux récurrents ci-dessus.
+        </div>
+        <div style={{ maxWidth: 320 }}>
+          <AvailabilityCalendar dates={value.dates || []} onToggle={toggleDate} />
+        </div>
+      </div>
+
+      <div style={{ marginTop: 16, paddingTop: 14, borderTop: '1px solid var(--border)' }}>
+        <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>Date spécifique (horaire particulier)</div>
+        <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 8 }}>
+          Pour une date précise avec un horaire différent — remplace, pour cette date, les créneaux récurrents et les dates de disponibilité ci-dessus.
+        </div>
+        {(value.dateOverrides || []).length > 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 8, alignItems: 'flex-start' }}>
+            {(value.dateOverrides || []).map((o, i) => (
+              <span key={`${o.date}-${i}`} className="badge badge-blue" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                {formatSaturday(o.date)} : {o.start}–{o.end}
                 <button
                   type="button"
-                  onClick={() => removeDate(i)}
+                  onClick={() => removeOverride(i)}
                   style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', padding: 0, fontSize: 11, lineHeight: 1 }}
-                  title="Retirer cette date"
+                  title="Retirer cette date spécifique"
                 >
                   ✕
                 </button>
@@ -1193,9 +1299,18 @@ function AvailabilityEditor({ value, onChange }) {
             ))}
           </div>
         )}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <input type="date" className="form-input" style={{ width: 160, padding: '6px 8px' }} value={dateDraft} onChange={(e) => setDateDraft(e.target.value)} />
-          <button type="button" className="btn btn-ghost btn-sm" onClick={addDate}>+ Ajouter</button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+          <input type="date" className="form-input" style={{ width: 150, padding: '6px 8px' }} value={overrideDraft.date} onChange={(e) => setOverrideDraft((o) => ({ ...o, date: e.target.value }))} />
+          <select className="form-input" style={{ width: 84, padding: '6px 8px' }} value={overrideDraft.start} onChange={(e) => setOverrideDraft((o) => ({ ...o, start: e.target.value }))}>
+            <option value="">--</option>
+            {AVAILABILITY_HOURS.map((h) => <option key={h} value={h}>{h}</option>)}
+          </select>
+          <span style={{ color: 'var(--text-muted)' }}>–</span>
+          <select className="form-input" style={{ width: 84, padding: '6px 8px' }} value={overrideDraft.end} onChange={(e) => setOverrideDraft((o) => ({ ...o, end: e.target.value }))}>
+            <option value="">--</option>
+            {AVAILABILITY_HOURS.map((h) => <option key={h} value={h}>{h}</option>)}
+          </select>
+          <button type="button" className="btn btn-ghost btn-sm" onClick={addOverride}>+ Ajouter</button>
         </div>
       </div>
     </div>
