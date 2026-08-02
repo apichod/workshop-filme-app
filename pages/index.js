@@ -2685,7 +2685,7 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
           </div>
         </section>
 
-        <section className="section">
+        <section className="section" id="formations" style={{ scrollMarginTop: 24 }}>
           <div className="section-head" style={{ alignItems: 'flex-start', justifyContent: 'space-between' }}>
             <div>
               <EditableText isAdmin={isAdmin} tag="h2" value={content.topics_heading} onSave={(v) => saveContent('topics_heading', v)} />
