@@ -1588,8 +1588,10 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
                   <label className="form-label">Date</label>
                   <div className="checkbox-list">
                     <div className="checkbox-item">
-                      Le {formatSaturday(modalTopic.fixedDate)} — date fixe, non modifiable
-                      <span style={{ color: 'var(--text-muted)' }}> · {dateStatusLabel(modalTopic.fixedDate)}</span>
+                      <span>
+                        Le {formatSaturday(modalTopic.fixedDate)} — date fixe, non modifiable
+                        <span style={{ color: 'var(--text-muted)' }}> · {dateStatusLabel(modalTopic.fixedDate)}</span>
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -1614,10 +1616,12 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
                             disabled={takenByOther}
                             onChange={() => toggleDate(d)}
                           />
-                          {formatSaturday(d)}
-                          {takenByOther
-                            ? ' — réservé par une autre formation'
-                            : <span style={{ color: 'var(--text-muted)' }}> · {dateStatusLabel(d)}</span>}
+                          <span>
+                            {formatSaturday(d)}
+                            {takenByOther
+                              ? ' — réservé par une autre formation'
+                              : <span style={{ color: 'var(--text-muted)' }}> · {dateStatusLabel(d)}</span>}
+                          </span>
                         </label>
                       );
                     })}
