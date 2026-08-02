@@ -2859,7 +2859,7 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
                     onDragOver={(e) => { if (topicReorderEnabled) e.preventDefault(); }}
                     onDrop={() => { if (draggingTopicId) handleTopicDrop(draggingTopicId, t.id); setDraggingTopicId(null); }}
                     onDragEnd={() => setDraggingTopicId(null)}
-                    className={topicReorderEnabled ? 'topic-card-draggable' : undefined}
+                    className={`topic-card-slot ${topicReorderEnabled ? 'topic-card-draggable' : ''}`}
                     style={draggingTopicId === t.id ? { opacity: 0.4 } : undefined}
                   >
                     <TopicCard topic={t} index={topics.indexOf(t)} isAdmin={isAdmin} onOpenRegister={(id) => openModal(id, null)} onSaved={updateTopicInList} onDeleted={removeTopicFromList} onTopicsReplaced={setTopics} formateurs={formateurs} />
