@@ -85,6 +85,7 @@ function newHero() {
     bullets: DEFAULT_HERO_BULLETS(),
     ctaText: '',
     ctaLink: '',
+    enabled: true,
   };
 }
 
@@ -2235,15 +2236,20 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
   // repli sur les bannières par défaut si le JSON est absent/invalide.
   const parsedHeroes = parseHeroes(content.heroes_json);
   const heroes = parsedHeroes.length ? parsedHeroes : parseHeroes(CONTENT_DEFAULTS.heroes_json);
-  const safeHeroSlide = Math.min(heroSlide, heroes.length - 1);
+  // Côté admin, le carrousel montre toutes les bannières (actives ou non) pour
+  // pouvoir les éditer/réactiver ; côté visiteur, seules les bannières
+  // actives (enabled !== false — true par défaut pour les anciennes
+  // bannières sans ce champ) sont montrées.
+  const displayHeroes = isAdmin ? heroes : heroes.filter((h) => h.enabled !== false);
+  const safeHeroSlide = displayHeroes.length ? Math.min(heroSlide, displayHeroes.length - 1) : 0;
   // Défilement automatique du carrousel Hero (visiteurs uniquement — coupé en
   // mode admin pour ne pas changer de slide pendant une édition en cours).
   useEffect(() => {
     if (isAdmin) return;
-    if (heroes.length <= 1) return;
-    const id = setInterval(() => setHeroSlide((s) => (s + 1) % heroes.length), 6000);
+    if (displayHeroes.length <= 1) return;
+    const id = setInterval(() => setHeroSlide((s) => (s + 1) % displayHeroes.length), 6000);
     return () => clearInterval(id);
-  }, [heroSlide, isAdmin, heroes.length]);
+  }, [heroSlide, isAdmin, displayHeroes.length]);
   const [modal, setModal] = useState(null); // { topicId, dates: string[] }
   const [showModalTopicDetail, setShowModalTopicDetail] = useState(false);
   const [form, setForm] = useState({ name: '', email: '' });
@@ -2414,6 +2420,9 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
     updateHeroes(next);
     setHeroSlide(index + 1);
   }
+  function toggleHeroEnabled(index) {
+    updateHero(index, { enabled: heroes[index].enabled === false });
+  }
 
   async function toggleClosedDate(dateIso, closed) {
     const res = await fetch('/api/admin/closed-dates', {
@@ -2542,6 +2551,7 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
         </div>
       </div>
 
+      {displayHeroes.length > 0 && (
       <section className="hero-banner">
         <div className="hero-bg">
           <ImgPlaceholder iconSize={40} />
@@ -2551,6 +2561,9 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
           <div className="hero-admin-actions">
             <button type="button" onClick={addHero}>+ Ajouter une bannière</button>
             <button type="button" onClick={() => duplicateHero(safeHeroSlide)}>⧉ Dupliquer cette bannière</button>
+            <button type="button" onClick={() => toggleHeroEnabled(safeHeroSlide)}>
+              {displayHeroes[safeHeroSlide]?.enabled === false ? 'Activer cette bannière' : 'Désactiver cette bannière'}
+            </button>
             <button type="button" onClick={() => removeHero(safeHeroSlide)} disabled={heroes.length <= 1}>
               Supprimer cette bannière
             </button>
@@ -2560,30 +2573,33 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
         <div className="hero-banner-inner">
           <HeroSlideEditor
             isAdmin={isAdmin}
-            hero={heroes[safeHeroSlide]}
+            hero={displayHeroes[safeHeroSlide]}
             onChange={(patch) => updateHero(safeHeroSlide, patch)}
           />
         </div>
 
-        {heroes.length > 1 && (
+        {displayHeroes.length > 1 && (
           <>
-            <button type="button" className="hero-arrow hero-arrow-prev" onClick={() => setHeroSlide((s) => (s + heroes.length - 1) % heroes.length)} aria-label="Bannière précédente">‹</button>
-            <button type="button" className="hero-arrow hero-arrow-next" onClick={() => setHeroSlide((s) => (s + 1) % heroes.length)} aria-label="Bannière suivante">›</button>
+            <button type="button" className="hero-arrow hero-arrow-prev" onClick={() => setHeroSlide((s) => (s + displayHeroes.length - 1) % displayHeroes.length)} aria-label="Bannière précédente">‹</button>
+            <button type="button" className="hero-arrow hero-arrow-next" onClick={() => setHeroSlide((s) => (s + 1) % displayHeroes.length)} aria-label="Bannière suivante">›</button>
 
             <div className="hero-dots">
-              {heroes.map((h, i) => (
+              {displayHeroes.map((h, i) => (
                 <button
                   key={h.id || i}
                   type="button"
                   className={`hero-dot ${safeHeroSlide === i ? 'active' : ''}`}
+                  style={h.enabled === false ? { opacity: 0.4 } : undefined}
                   onClick={() => setHeroSlide(i)}
                   aria-label={`Aller à la bannière ${i + 1}`}
+                  title={h.enabled === false ? 'Bannière désactivée' : undefined}
                 />
               ))}
             </div>
           </>
         )}
       </section>
+      )}
 
       <div className="page" style={isAdmin ? { paddingBottom: 70 } : undefined}>
         <section className="section">
