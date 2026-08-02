@@ -1,7 +1,7 @@
 import { supabaseAdmin } from '../../lib/supabase';
 import { getCustomerByEmail } from '../../lib/booqable';
 import { sendWorkshopConfirmation, sendWorkshopValidated } from '../../lib/mailer';
-import { CAPACITY, getTopicById, isValidSaturday, formatSaturday } from '../../lib/topics';
+import { CAPACITY, getTopicById, isValidWeekdayDate, topicWeekday, formatSaturday } from '../../lib/topics';
 import { isDateClosed } from '../../lib/closedDates';
 import { cancelConflictingSessions, isDateTakenByAnotherTopic, effectiveThreshold, isPriorityTopic } from '../../lib/sessions';
 
@@ -23,11 +23,12 @@ export default async function handler(req, res) {
 
     // ─── Une formation à date fixe ne peut recevoir d'inscription que pour
     // cette date précise (n'importe quel jour de la semaine) ; les autres
-    // formations restent limitées aux samedis à venir. ────────────────────
+    // formations sont limitées aux occurrences à venir de leur jour de
+    // semaine (mercredi/vendredi/samedi selon leur planning). ─────────────
     if (topic.fixedDate) {
       if (dateIso !== topic.fixedDate) return res.status(400).json({ error: 'date_closed' });
-    } else if (!isValidSaturday(dateIso)) {
-      return res.status(400).json({ error: 'Merci de choisir un samedi à venir' });
+    } else if (!isValidWeekdayDate(dateIso, topicWeekday(topic))) {
+      return res.status(400).json({ error: 'Merci de choisir une date valide à venir' });
     }
 
     // ─── Ce samedi a-t-il été fermé aux inscriptions (préférences admin) ? ───

@@ -25,7 +25,7 @@ export default requireAuth(async function handler(req, res) {
 
   if (req.method !== 'PATCH') return res.status(405).json({ error: 'Méthode non autorisée' });
 
-  const { title, level, desc, fullDescription, program, price, duration, category, type, bonus, maxParticipants, equipment, minParticipants, fixedDate, archived } = req.body || {};
+  const { title, level, desc, fullDescription, program, price, duration, category, type, bonus, maxParticipants, equipment, minParticipants, scheduleMode, fixedDate, archived } = req.body || {};
   let parsedMax;
   if (maxParticipants !== undefined) {
     const n = Number.parseInt(maxParticipants, 10);
@@ -46,13 +46,16 @@ export default requireAuth(async function handler(req, res) {
       maxParticipants: parsedMax,
       equipment,
       minParticipants: parsedMin,
+      scheduleMode,
       fixedDate: cleanFixedDate,
       archived,
     });
     if (!topic) return res.status(404).json({ error: 'Formation introuvable' });
     // La date fixe réserve immédiatement sa date : on annule tout autre
     // évènement déjà programmé ce jour-là, sans attendre une inscription.
-    if (cleanFixedDate) await enforceFixedDateExclusivity(topic);
+    // On se base sur l'état persisté (topic.fixedDate), pas sur la valeur
+    // brute reçue, car updateTopic l'efface si le planning n'est plus "fixed".
+    if (topic.fixedDate) await enforceFixedDateExclusivity(topic);
     return res.status(200).json({ topic });
   } catch (err) {
     console.error('[admin/topics/[id] PATCH]', err);

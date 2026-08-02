@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import Head from 'next/head';
 import { getOpenSessions } from '../lib/sessions';
-import { getVisibleTopics, getAllTopics, CAPACITY, VALIDATION_THRESHOLD, PRICE_LABEL, TOPIC_CATEGORIES, TOPIC_TYPES, nextSaturdays, yearSaturdays, formatSaturday, formatPrice, parsePriceValue } from '../lib/topics';
+import { getVisibleTopics, getAllTopics, CAPACITY, VALIDATION_THRESHOLD, PRICE_LABEL, TOPIC_CATEGORIES, TOPIC_TYPES, SCHEDULE_OPTIONS, nextWeekdayDates, topicWeekday, scheduleOption, yearSaturdays, formatSaturday, formatPrice, parsePriceValue } from '../lib/topics';
 import { getSiteContent, CONTENT_DEFAULTS } from '../lib/content';
 import { getClosedDates } from '../lib/closedDates';
 import { getSession } from '../lib/auth';
@@ -28,6 +28,18 @@ const CATEGORY_STYLES = {
 };
 function categoryStyle(category) {
   return CATEGORY_STYLES[category] || { badgeClass: 'badge-blue', color: '#2B80FF' };
+}
+
+// Petite note affichée sur la carte/le détail quand le planning n'est pas le
+// samedi par défaut : soit une date fixe unique, soit un autre jour récurrent.
+function scheduleLabel(topic) {
+  if (topic.scheduleMode === 'fixed') {
+    return topic.fixedDate ? `📅 Date fixée : ${formatSaturday(topic.fixedDate)}` : null;
+  }
+  if (topic.scheduleMode && topic.scheduleMode !== 'saturday') {
+    return `🗓️ ${scheduleOption(topic.scheduleMode).label}`;
+  }
+  return null;
 }
 
 // ─── Texte éditable en place (mode admin uniquement) ─────────────────────────
@@ -91,6 +103,7 @@ function emptyTopicForm(topic) {
     maxParticipants: topic?.maxParticipants ? String(topic.maxParticipants) : '',
     equipment: topic?.equipment || '',
     minParticipants: Number.isFinite(topic?.minParticipants) ? String(topic.minParticipants) : '',
+    scheduleMode: topic?.scheduleMode || 'saturday',
     fixedDate: topic?.fixedDate || '',
   };
 }
@@ -222,21 +235,32 @@ function TopicFormModal({ mode, topic, onClose, onSaved }) {
           </div>
 
           <div className="form-group">
-            <label className="form-label">Date fixe</label>
-            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-              <input
-                className="form-input"
-                type="date"
-                value={form.fixedDate}
-                onChange={(e) => set('fixedDate', e.target.value)}
-                style={{ flex: 1 }}
-              />
-              {form.fixedDate && (
-                <button type="button" className="btn btn-ghost btn-sm" onClick={() => set('fixedDate', '')}>Retirer</button>
-              )}
-            </div>
+            <label className="form-label">Planning</label>
+            <select
+              className="form-input"
+              value={form.scheduleMode}
+              onChange={(e) => {
+                const mode = e.target.value;
+                set('scheduleMode', mode);
+                if (mode !== 'fixed') set('fixedDate', '');
+              }}
+            >
+              {SCHEDULE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+            {form.scheduleMode === 'fixed' && (
+              <div style={{ marginTop: 8 }}>
+                <input
+                  className="form-input"
+                  type="date"
+                  value={form.fixedDate}
+                  onChange={(e) => set('fixedDate', e.target.value)}
+                />
+              </div>
+            )}
             <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
-              Remplace, pour cette formation, la liste des samedis proposée par cette date unique (n'importe quel jour). Cette date est alors réservée en exclusivité : elle annule tout autre évènement déjà programmé ce jour-là et n'est plus proposée pour aucune autre formation.
+              {form.scheduleMode === 'fixed'
+                ? "Remplace, pour cette formation, la liste des samedis proposée par cette date unique (n'importe quel jour). Cette date est alors réservée en exclusivité : elle annule tout autre évènement déjà programmé ce jour-là et n'est plus proposée pour aucune autre formation."
+                : `Les visiteurs choisiront parmi les prochains ${scheduleOption(form.scheduleMode).plural.toLowerCase()} à venir.`}
             </div>
           </div>
 
@@ -280,8 +304,8 @@ function TopicDetailModal({ topic, onClose, onRegister }) {
         <div className="level" style={{ marginTop: 4 }}>
           {[topic.level, formatPrice(topic.price), topic.duration || '1 journée (9h–18h)', `${topic.maxParticipants || CAPACITY} participants max`].filter(Boolean).join(' · ')}
         </div>
-        {topic.fixedDate && (
-          <div className="bonus-note" style={{ marginTop: 10 }}>📅 Date fixée : {formatSaturday(topic.fixedDate)}</div>
+        {scheduleLabel(topic) && (
+          <div className="bonus-note" style={{ marginTop: 10 }}>{scheduleLabel(topic)}</div>
         )}
         {topic.bonus && (
           <div className="bonus-note" style={{ marginTop: 10 }}>🎁 {topic.bonus}</div>
@@ -378,7 +402,7 @@ function TopicCard({ topic, index, isAdmin, onOpenRegister, onSaved, onDeleted }
       <h3>{topic.title}</h3>
       <p>{topic.desc}</p>
       {topic.bonus && <div className="bonus-note">🎁 {topic.bonus}</div>}
-      {topic.fixedDate && <div className="bonus-note">📅 Date fixée : {formatSaturday(topic.fixedDate)}</div>}
+      {scheduleLabel(topic) && <div className="bonus-note">{scheduleLabel(topic)}</div>}
       <div className="level">{[topic.level, formatPrice(topic.price), topic.duration || '1 journée (9h–18h)'].filter(Boolean).join(' · ')}</div>
       {error && <div className="form-error">{error}</div>}
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
@@ -847,7 +871,6 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
   const [topicTypeFilter, setTopicTypeFilter] = useState([]); // idem pour "Formations disponibles"
   const [topicSort, setTopicSort] = useState(''); // '' (ordre par défaut), 'newest', 'price_desc', 'price_asc', 'popular'
 
-  const saturdays = nextSaturdays(8, closedDates);
   const selectableTopics = topics.filter((t) => !t.archived);
   const usedSessionTypes = [...new Set(sessions.map((s) => s.topic?.type || 'Formation'))];
   const usedTopicTypes = [...new Set(topics.map((t) => t.type || 'Formation'))];
@@ -883,6 +906,14 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
     setTopicTypeFilter((list) => (list.includes(t) ? list.filter((x) => x !== t) : [...list, t]));
   }
   const modalTopic = modal ? topics.find((t) => t.id === modal.topicId) : null;
+  // Liste de dates proposées dans la popup d'inscription : les prochaines
+  // occurrences du jour de semaine de la formation (mercredi/vendredi/samedi),
+  // ou sa date fixe unique si elle en a une.
+  const modalDates = modalTopic?.fixedDate
+    ? [modalTopic.fixedDate]
+    : modalTopic
+      ? nextWeekdayDates(topicWeekday(modalTopic), 8, closedDates)
+      : [];
 
   function updateTopicInList(updated) {
     setTopics((list) => list.map((t) => (t.id === updated.id ? updated : t)));
@@ -1269,7 +1300,7 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
             <h2>S'inscrire à un workshop</h2>
             <div className="modal-sub">
               {formatPrice(modalTopic?.price)} — {modalTopic?.maxParticipants || CAPACITY} places maximum
-              {modalTopic?.fixedDate ? '' : ' · vous pouvez cocher plusieurs samedis pour la même formation'}
+              {modalTopic?.fixedDate ? '' : ' · vous pouvez cocher plusieurs dates pour la même formation'}
             </div>
 
             <form onSubmit={submit}>
@@ -1295,9 +1326,11 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
                 </div>
               ) : (
                 <div className="form-group">
-                  <label className="form-label">Samedis ({modal.dates.length} sélectionné{modal.dates.length > 1 ? 's' : ''})</label>
+                  <label className="form-label">
+                    {scheduleOption(modalTopic?.scheduleMode).plural} ({modal.dates.length} sélectionné{modal.dates.length > 1 ? 's' : ''})
+                  </label>
                   <div className="checkbox-list">
-                    {saturdays.map((d) => {
+                    {modalDates.map((d) => {
                       // Un seul évènement par date : les dates déjà validées pour une
                       // AUTRE formation, ou réservées par la date fixe d'une autre
                       // formation, ne sont plus proposables ici.

@@ -16,7 +16,7 @@ export default requireAuth(async function handler(req, res) {
   }
 
   if (req.method === 'POST') {
-    const { title, level, desc, fullDescription, program, price, duration, category, type, bonus, maxParticipants, equipment, minParticipants, fixedDate } = req.body || {};
+    const { title, level, desc, fullDescription, program, price, duration, category, type, bonus, maxParticipants, equipment, minParticipants, scheduleMode, fixedDate } = req.body || {};
     if (!title?.trim()) return res.status(400).json({ error: 'Le titre est requis' });
     const parsedMax = Number.parseInt(maxParticipants, 10);
     const parsedMin = Number.parseInt(minParticipants, 10);
@@ -36,6 +36,7 @@ export default requireAuth(async function handler(req, res) {
         maxParticipants: Number.isFinite(parsedMax) && parsedMax > 0 ? parsedMax : null,
         equipment: (equipment || '').trim(),
         minParticipants: Number.isFinite(parsedMin) && parsedMin >= 0 ? parsedMin : null,
+        scheduleMode,
         fixedDate: cleanFixedDate,
       });
       if (topic.fixedDate) await enforceFixedDateExclusivity(topic);
