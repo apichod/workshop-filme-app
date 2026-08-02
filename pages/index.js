@@ -240,7 +240,7 @@ function emptyTopicForm(topic) {
     minParticipants: Number.isFinite(topic?.minParticipants) ? String(topic.minParticipants) : '',
     scheduleMode: topic?.scheduleMode || 'saturday',
     fixedDate: topic?.fixedDate || '',
-    formateurId: topic?.formateurId || '',
+    formateurIds: topic?.formateurIds || [],
   };
 }
 
@@ -257,7 +257,7 @@ function TopicFormModal({ mode, topic, onClose, onSaved, onTopicsReplaced, forma
   async function submit(e) {
     e.preventDefault();
     if (!form.title.trim()) { setError('Le titre est requis.'); return; }
-    if (!form.formateurId) { setError('Le formateur est requis.'); return; }
+    if (!form.formateurIds.length) { setError('Au moins un formateur est requis.'); return; }
     setLoading(true);
     setError('');
     try {
@@ -316,14 +316,25 @@ function TopicFormModal({ mode, topic, onClose, onSaved, onTopicsReplaced, forma
           </div>
 
           <div className="form-group">
-            <label className="form-label">Formateur</label>
-            <select className="form-input" value={form.formateurId} onChange={(e) => set('formateurId', e.target.value)} required>
-              <option value="">— Choisir un formateur —</option>
-              {formateurs.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
-            </select>
-            {formateurs.length === 0 && (
+            <label className="form-label">Formateur(s)</label>
+            {formateurs.length === 0 ? (
               <div style={{ fontSize: 12, color: 'var(--red)', marginTop: 4 }}>
                 Aucun formateur pour l'instant — ajoutez-en un dans Préférences → Formateurs avant de créer une formation.
+              </div>
+            ) : (
+              <div className="checkbox-list">
+                {formateurs.map((f) => (
+                  <label className="checkbox-item" key={f.id}>
+                    <input
+                      type="checkbox"
+                      checked={form.formateurIds.includes(f.id)}
+                      onChange={(e) => set('formateurIds', e.target.checked
+                        ? [...form.formateurIds, f.id]
+                        : form.formateurIds.filter((id) => id !== f.id))}
+                    />
+                    {f.name}
+                  </label>
+                ))}
               </div>
             )}
           </div>
@@ -1504,10 +1515,14 @@ function FormateurForm({ formateur, onCancel, onSaved, topics, onTopicUpdated, b
     setTopicSavingId(topic.id);
     setTopicError('');
     try {
+      const currentIds = topic.formateurIds || (topic.formateurId ? [topic.formateurId] : []);
+      const newIds = checked
+        ? [...new Set([...currentIds, formateur.id])]
+        : currentIds.filter((id) => id !== formateur.id);
       const res = await fetch(`/api/admin/topics/${topic.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ formateurId: checked ? formateur.id : null }),
+        body: JSON.stringify({ formateurIds: newIds }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Erreur');
@@ -1602,7 +1617,7 @@ function FormateurForm({ formateur, onCancel, onSaved, topics, onTopicUpdated, b
                 <label className={`checkbox-item ${topicSavingId === t.id ? 'checkbox-item-disabled' : ''}`} key={t.id}>
                   <input
                     type="checkbox"
-                    checked={t.formateurId === formateur.id}
+                    checked={(t.formateurIds || (t.formateurId ? [t.formateurId] : [])).includes(formateur.id)}
                     disabled={topicSavingId === t.id}
                     onChange={(e) => toggleTopicAssignment(t, e.target.checked)}
                   />

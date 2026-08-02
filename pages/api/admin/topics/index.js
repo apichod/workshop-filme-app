@@ -16,9 +16,12 @@ export default requireAuth(async function handler(req, res) {
   }
 
   if (req.method === 'POST') {
-    const { title, level, desc, fullDescription, program, price, duration, category, type, bonus, maxParticipants, equipment, minParticipants, scheduleMode, fixedDate, formateurId } = req.body || {};
+    const { title, level, desc, fullDescription, program, price, duration, category, type, bonus, maxParticipants, equipment, minParticipants, scheduleMode, fixedDate, formateurId, formateurIds } = req.body || {};
     if (!title?.trim()) return res.status(400).json({ error: 'Le titre est requis' });
-    if (!formateurId) return res.status(400).json({ error: 'Le formateur est requis' });
+    // formateurIds (tableau, plusieurs formateurs possibles) — formateurId
+    // (singulier) conservé en repli pour compat descendante.
+    const cleanFormateurIds = Array.isArray(formateurIds) ? formateurIds.filter(Boolean) : (formateurId ? [formateurId] : []);
+    if (!cleanFormateurIds.length) return res.status(400).json({ error: 'Au moins un formateur est requis' });
     const parsedMax = Number.parseInt(maxParticipants, 10);
     const parsedMin = Number.parseInt(minParticipants, 10);
     const cleanFixedDate = fixedDate && DATE_RE.test(fixedDate) ? fixedDate : null;
@@ -39,7 +42,7 @@ export default requireAuth(async function handler(req, res) {
         minParticipants: Number.isFinite(parsedMin) && parsedMin >= 0 ? parsedMin : null,
         scheduleMode,
         fixedDate: cleanFixedDate,
-        formateurId,
+        formateurIds: cleanFormateurIds,
       });
       if (topic.fixedDate) await enforceFixedDateExclusivity(topic);
       return res.status(200).json({ topic });

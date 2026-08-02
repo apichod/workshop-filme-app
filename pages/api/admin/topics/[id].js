@@ -24,11 +24,13 @@ export default requireAuth(async function handler(req, res) {
 
   if (req.method !== 'PATCH') return res.status(405).json({ error: 'Méthode non autorisée' });
 
-  const { title, level, desc, fullDescription, program, price, duration, category, type, bonus, maxParticipants, equipment, minParticipants, scheduleMode, fixedDate, formateurId, archived } = req.body || {};
-  // Contrairement à la création (POST), on autorise ici formateurId à être
-  // vidé (null) — utilisé notamment par la case à cocher "Formations
+  const { title, level, desc, fullDescription, program, price, duration, category, type, bonus, maxParticipants, equipment, minParticipants, scheduleMode, fixedDate, formateurId, formateurIds, archived } = req.body || {};
+  // Contrairement à la création (POST), on autorise ici formateurIds/formateurId
+  // à être vidé — utilisé notamment par la case à cocher "Formations
   // assignées" de la fiche formateur, qui peut retirer un formateur d'une
   // formation sans forcément lui en assigner un autre dans la foulée.
+  // formateurIds (tableau, plusieurs formateurs) prime sur l'ancien champ
+  // formateurId (singulier, conservé pour compat descendante) — cf. updateTopic.
   let parsedMax;
   if (maxParticipants !== undefined) {
     const n = Number.parseInt(maxParticipants, 10);
@@ -52,6 +54,7 @@ export default requireAuth(async function handler(req, res) {
       scheduleMode,
       fixedDate: cleanFixedDate,
       formateurId,
+      formateurIds,
       archived,
     });
     if (!topic) return res.status(404).json({ error: 'Formation introuvable' });
