@@ -1215,7 +1215,7 @@ function emptyFormateurForm(f) {
   };
 }
 
-function FormateurForm({ formateur, onCancel, onSaved, topics, onTopicUpdated }) {
+function FormateurForm({ formateur, onCancel, onSaved, topics, onTopicUpdated, bordered = true }) {
   const [form, setForm] = useState(emptyFormateurForm(formateur));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -1270,7 +1270,7 @@ function FormateurForm({ formateur, onCancel, onSaved, topics, onTopicUpdated })
   }
 
   return (
-    <form onSubmit={submit} style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 14, marginBottom: 12 }}>
+    <form onSubmit={submit} style={bordered ? { border: '1px solid var(--border)', borderRadius: 8, padding: 14, marginBottom: 12 } : undefined}>
       {error && <div className="form-error">{error}</div>}
       <div style={{ display: 'flex', gap: 12 }}>
         <div className="form-group" style={{ flex: 1 }}>
@@ -1357,10 +1357,22 @@ function FormateurForm({ formateur, onCancel, onSaved, topics, onTopicUpdated })
 // Popup d'édition d'un formateur depuis sa carte homepage (réutilise
 // FormateurForm, déjà utilisé "en ligne" dans Préférences → Formateurs).
 function FormateurFormModal({ formateur, onClose, onSaved, topics, onTopicUpdated }) {
+  const [showJson, setShowJson] = useState(false);
   return (
+    <>
     <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className="modal" style={{ maxWidth: 560, maxHeight: '85vh', overflowY: 'auto' }}>
         <button className="modal-close" onClick={onClose}>✕</button>
+        {formateur && (
+          <button
+            type="button"
+            className="link-btn"
+            onClick={() => setShowJson(true)}
+            style={{ position: 'absolute', top: 22, right: 52, fontSize: 13, whiteSpace: 'nowrap' }}
+          >
+            ⇅ Export / Import JSON
+          </button>
+        )}
         <h2>Éditer le formateur</h2>
         <div style={{ marginTop: 16 }}>
           <FormateurForm
@@ -1369,10 +1381,19 @@ function FormateurFormModal({ formateur, onClose, onSaved, topics, onTopicUpdate
             onSaved={(f) => { onSaved(f); onClose(); }}
             topics={topics}
             onTopicUpdated={onTopicUpdated}
+            bordered={false}
           />
         </div>
       </div>
     </div>
+    {showJson && formateur && (
+      <FormateurJsonModal
+        formateur={formateur}
+        onClose={() => setShowJson(false)}
+        onImported={(f) => { onSaved(f); setShowJson(false); }}
+      />
+    )}
+    </>
   );
 }
 
