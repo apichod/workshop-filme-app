@@ -1346,7 +1346,7 @@ function AvailabilityEditor({ value, onChange }) {
           </div>
         </div>
         <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 8 }}>
-          Cochez les dates où il est présent — les horaires appliqués sont automatiquement ceux définis ci-dessus pour le jour de la semaine correspondant (ex : une date qui tombe un lundi applique les créneaux de « Lundi »).
+          Cocher les dates de présence — les horaires appliqués sont automatiquement ceux définis ci-dessus pour le jour de la semaine correspondant (ex : une date qui tombe un lundi applique les créneaux de « Lundi »).
         </div>
         {agendaView === 'liste' ? (
           <>
