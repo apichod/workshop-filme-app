@@ -662,13 +662,14 @@ function RegistrationsPreferences({ onChanged }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [removingId, setRemovingId] = useState(null);
+  const [deletingSessionId, setDeletingSessionId] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
     fetch('/api/admin/sessions')
       .then((r) => r.json())
       .then((data) => { if (!cancelled) setSessions(data.sessions || []); })
-      .catch(() => { if (!cancelled) setError('Impossible de charger les inscriptions'); })
+      .catch(() => { if (!cancelled) setError('Impossible de charger les sessions'); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, []);
@@ -682,9 +683,7 @@ function RegistrationsPreferences({ onChanged }) {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Erreur');
       setSessions((list) =>
-        list
-          .map((s) => (s.id === sessionId ? { ...s, registrants: s.registrants.filter((r) => r.id !== registrant.id) } : s))
-          .filter((s) => s.registrants.length > 0)
+        list.map((s) => (s.id === sessionId ? { ...s, registrants: s.registrants.filter((r) => r.id !== registrant.id) } : s))
       );
       onChanged?.();
     } catch (err) {
@@ -694,41 +693,78 @@ function RegistrationsPreferences({ onChanged }) {
     }
   }
 
+  async function removeSession(s) {
+    const label = `${s.topic?.title || s.topicId} — ${s.dateLabel}`;
+    const warn = s.registrants.length > 0
+      ? ` ${s.registrants.length} inscrit(s) seront prévenus par email.`
+      : '';
+    if (!window.confirm(`Supprimer définitivement la session « ${label} » ?${warn}`)) return;
+    setDeletingSessionId(s.id);
+    setError('');
+    try {
+      const res = await fetch(`/api/admin/sessions/${s.id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Erreur');
+      setSessions((list) => list.filter((x) => x.id !== s.id));
+      onChanged?.();
+    } catch (err) {
+      setError(err.message || 'Erreur');
+    } finally {
+      setDeletingSessionId(null);
+    }
+  }
+
   if (loading) return <div className="loading" style={{ marginTop: 16 }}>Chargement…</div>;
 
   return (
     <>
       <p style={{ color: 'var(--text-muted)', fontSize: 13, marginTop: 8, marginBottom: 16 }}>
-        Retirez manuellement un inscrit (erreur d'inscription, désistement signalé par téléphone…). Si le
-        nombre d'inscrits repasse sous le seuil de validation, la session redevient "non validée".
+        Retirez manuellement un inscrit (erreur d'inscription, désistement signalé par téléphone…), ou
+        supprimez une session entière (une date restée programmée par erreur, par exemple). Si le nombre
+        d'inscrits repasse sous le seuil de validation, la session redevient "non validée".
       </p>
 
       {error && <div className="form-error">{error}</div>}
 
       {(!sessions || sessions.length === 0) && !error ? (
-        <div className="empty">Aucune inscription à venir pour le moment.</div>
+        <div className="empty">Aucune session à venir pour le moment.</div>
       ) : (
         sessions.map((s) => (
           <div key={s.id} style={{ marginBottom: 16 }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', marginBottom: 4 }}>
-              {s.topic?.title || s.topicId} — {s.dateLabel}
-              {s.validated && <span className="badge badge-green" style={{ marginLeft: 8 }}>✅ Validée</span>}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 4 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>
+                {s.topic?.title || s.topicId} — {s.dateLabel}
+                {s.validated && <span className="badge badge-green" style={{ marginLeft: 8 }}>✅ Validée</span>}
+              </div>
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm"
+                disabled={deletingSessionId === s.id}
+                onClick={() => removeSession(s)}
+                style={{ color: '#c0392b' }}
+              >
+                {deletingSessionId === s.id ? '…' : 'Supprimer la session'}
+              </button>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-              {s.registrants.map((r) => (
-                <div key={r.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, fontSize: 13, padding: '6px 0', borderBottom: '1px solid var(--border)' }}>
-                  <span>{r.name} <span style={{ color: 'var(--text-muted)' }}>· {r.email}</span></span>
-                  <button
-                    type="button"
-                    className="btn btn-ghost btn-sm"
-                    disabled={removingId === r.id}
-                    onClick={() => removeRegistrant(s.id, r)}
-                  >
-                    {removingId === r.id ? '…' : 'Retirer'}
-                  </button>
-                </div>
-              ))}
-            </div>
+            {s.registrants.length === 0 ? (
+              <div style={{ fontSize: 13, color: 'var(--text-muted)', padding: '4px 0' }}>Aucun inscrit.</div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                {s.registrants.map((r) => (
+                  <div key={r.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, fontSize: 13, padding: '6px 0', borderBottom: '1px solid var(--border)' }}>
+                    <span>{r.name} <span style={{ color: 'var(--text-muted)' }}>· {r.email}</span></span>
+                    <button
+                      type="button"
+                      className="btn btn-ghost btn-sm"
+                      disabled={removingId === r.id}
+                      onClick={() => removeRegistrant(s.id, r)}
+                    >
+                      {removingId === r.id ? '…' : 'Retirer'}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         ))
       )}
