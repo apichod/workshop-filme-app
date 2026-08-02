@@ -2403,6 +2403,12 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
     updateHeroes(next);
     setHeroSlide((s) => Math.min(s, next.length - 1));
   }
+  function duplicateHero(index) {
+    const clone = { ...heroes[index], id: `hero-${Date.now()}`, bullets: (heroes[index].bullets || []).map((b) => ({ ...b })) };
+    const next = [...heroes.slice(0, index + 1), clone, ...heroes.slice(index + 1)];
+    updateHeroes(next);
+    setHeroSlide(index + 1);
+  }
 
   async function toggleClosedDate(dateIso, closed) {
     const res = await fetch('/api/admin/closed-dates', {
@@ -2541,14 +2547,6 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
             hero={heroes[safeHeroSlide]}
             onChange={(patch) => updateHero(safeHeroSlide, patch)}
           />
-          {isAdmin && (
-            <div className="hero-admin-actions">
-              <button type="button" className="btn btn-ghost btn-sm" onClick={addHero}>+ Ajouter une bannière</button>
-              <button type="button" className="btn btn-ghost btn-sm" onClick={() => removeHero(safeHeroSlide)} disabled={heroes.length <= 1}>
-                Supprimer cette bannière
-              </button>
-            </div>
-          )}
         </div>
 
         {heroes.length > 1 && (
@@ -2570,6 +2568,16 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
           </>
         )}
       </section>
+
+      {isAdmin && (
+        <div className="hero-admin-actions">
+          <button type="button" className="btn btn-ghost btn-sm" onClick={addHero}>+ Ajouter une bannière</button>
+          <button type="button" className="btn btn-ghost btn-sm" onClick={() => duplicateHero(safeHeroSlide)}>⧉ Dupliquer cette bannière</button>
+          <button type="button" className="btn btn-ghost btn-sm" onClick={() => removeHero(safeHeroSlide)} disabled={heroes.length <= 1}>
+            Supprimer cette bannière
+          </button>
+        </div>
+      )}
 
       <div className="page" style={isAdmin ? { paddingBottom: 70 } : undefined}>
         <section className="section">
