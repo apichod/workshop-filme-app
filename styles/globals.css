@@ -292,14 +292,14 @@ h1, h2, h3, .section-head h2, .topic-card h3 { font-family: var(--font-heading-f
      bannières du carrousel ont donc rigoureusement la même hauteur ; un
      contenu trop long est simplement contenu (overflow hidden) plutôt que
      d'agrandir le bandeau. */
-  height: 390px;
+  height: 440px;
   overflow: hidden;
   display: flex;
   flex-direction: column;
   justify-content: center;
 }
 @media screen and (min-width: 750px) {
-  .hero-banner-inner { padding: 70px 50px; height: 450px; }
+  .hero-banner-inner { padding: 70px 50px; height: 500px; }
 }
 /* max-width: 100% ici (pas de limite basse) pour que la ligne de stats en
    dessous puisse s'étaler sur toute la largeur du bandeau et rester en ligne
