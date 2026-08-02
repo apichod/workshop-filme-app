@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import Head from 'next/head';
 import { getOpenSessions } from '../lib/sessions';
-import { getVisibleTopics, getAllTopics, CAPACITY, VALIDATION_THRESHOLD, PRICE_LABEL, TOPIC_CATEGORIES, TOPIC_TYPES, nextSaturdays, yearSaturdays, formatSaturday } from '../lib/topics';
+import { getVisibleTopics, getAllTopics, CAPACITY, VALIDATION_THRESHOLD, PRICE_LABEL, TOPIC_CATEGORIES, TOPIC_TYPES, nextSaturdays, yearSaturdays, formatSaturday, formatPrice } from '../lib/topics';
 import { getSiteContent, CONTENT_DEFAULTS } from '../lib/content';
 import { getClosedDates } from '../lib/closedDates';
 import { getSession } from '../lib/auth';
@@ -278,7 +278,7 @@ function TopicDetailModal({ topic, onClose, onRegister }) {
         )}
         <h2>{topic.title}</h2>
         <div className="level" style={{ marginTop: 4 }}>
-          {[topic.level, topic.price || PRICE_LABEL, topic.duration || '1 journée (9h–18h)', `${topic.maxParticipants || CAPACITY} participants max`].filter(Boolean).join(' · ')}
+          {[topic.level, formatPrice(topic.price), topic.duration || '1 journée (9h–18h)', `${topic.maxParticipants || CAPACITY} participants max`].filter(Boolean).join(' · ')}
         </div>
         {topic.fixedDate && (
           <div className="bonus-note" style={{ marginTop: 10 }}>📅 Date fixée : {formatSaturday(topic.fixedDate)}</div>
@@ -379,7 +379,7 @@ function TopicCard({ topic, index, isAdmin, onOpenRegister, onSaved, onDeleted }
       <p>{topic.desc}</p>
       {topic.bonus && <div className="bonus-note">🎁 {topic.bonus}</div>}
       {topic.fixedDate && <div className="bonus-note">📅 Date fixée : {formatSaturday(topic.fixedDate)}</div>}
-      <div className="level">{[topic.level, topic.price || PRICE_LABEL, topic.duration || '1 journée (9h–18h)'].filter(Boolean).join(' · ')}</div>
+      <div className="level">{[topic.level, formatPrice(topic.price), topic.duration || '1 journée (9h–18h)'].filter(Boolean).join(' · ')}</div>
       {error && <div className="form-error">{error}</div>}
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
         {!topic.archived && (
@@ -1170,7 +1170,7 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
             <button className="modal-close" onClick={closeModal}>✕</button>
             <h2>S'inscrire à un workshop</h2>
             <div className="modal-sub">
-              {modalTopic?.price || PRICE_LABEL} — {modalTopic?.maxParticipants || CAPACITY} places maximum
+              {formatPrice(modalTopic?.price)} — {modalTopic?.maxParticipants || CAPACITY} places maximum
               {modalTopic?.fixedDate ? '' : ' · vous pouvez cocher plusieurs samedis pour la même formation'}
             </div>
 
