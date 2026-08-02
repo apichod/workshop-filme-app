@@ -1331,7 +1331,7 @@ function AvailabilityEditor({ value, onChange }) {
               type="button"
               onClick={() => setAgendaView('liste')}
               title="Vue liste"
-              style={{ display: 'flex', alignItems: 'center', border: 'none', borderRadius: 4, padding: '4px 6px', cursor: 'pointer', background: agendaView === 'liste' ? 'var(--text)' : 'transparent', color: agendaView === 'liste' ? '#fff' : 'var(--text-muted)' }}
+              style={{ display: 'flex', alignItems: 'center', border: 'none', borderRadius: 4, padding: '4px 6px', cursor: 'pointer', background: agendaView === 'liste' ? '#9a9a9a' : 'transparent', color: agendaView === 'liste' ? '#fff' : 'var(--text-muted)' }}
             >
               <Icon name="list" size={14} />
             </button>
@@ -1339,7 +1339,7 @@ function AvailabilityEditor({ value, onChange }) {
               type="button"
               onClick={() => setAgendaView('calendrier')}
               title="Vue calendrier"
-              style={{ display: 'flex', alignItems: 'center', border: 'none', borderRadius: 4, padding: '4px 6px', cursor: 'pointer', background: agendaView === 'calendrier' ? 'var(--text)' : 'transparent', color: agendaView === 'calendrier' ? '#fff' : 'var(--text-muted)' }}
+              style={{ display: 'flex', alignItems: 'center', border: 'none', borderRadius: 4, padding: '4px 6px', cursor: 'pointer', background: agendaView === 'calendrier' ? '#9a9a9a' : 'transparent', color: agendaView === 'calendrier' ? '#fff' : 'var(--text-muted)' }}
             >
               <Icon name="calendar" size={14} />
             </button>
@@ -2520,7 +2520,7 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
                     type="button"
                     onClick={() => setSessionsView('liste')}
                     title="Vue liste"
-                    style={{ display: 'flex', alignItems: 'center', border: 'none', borderRadius: 4, padding: '5px 7px', cursor: 'pointer', background: sessionsView === 'liste' ? 'var(--text)' : 'transparent', color: sessionsView === 'liste' ? '#fff' : 'var(--text-muted)' }}
+                    style={{ display: 'flex', alignItems: 'center', border: 'none', borderRadius: 4, padding: '5px 7px', cursor: 'pointer', background: sessionsView === 'liste' ? '#9a9a9a' : 'transparent', color: sessionsView === 'liste' ? '#fff' : 'var(--text-muted)' }}
                   >
                     <Icon name="list" size={14} />
                   </button>
@@ -2528,7 +2528,7 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
                     type="button"
                     onClick={() => setSessionsView('calendrier')}
                     title="Vue calendrier"
-                    style={{ display: 'flex', alignItems: 'center', border: 'none', borderRadius: 4, padding: '5px 7px', cursor: 'pointer', background: sessionsView === 'calendrier' ? 'var(--text)' : 'transparent', color: sessionsView === 'calendrier' ? '#fff' : 'var(--text-muted)' }}
+                    style={{ display: 'flex', alignItems: 'center', border: 'none', borderRadius: 4, padding: '5px 7px', cursor: 'pointer', background: sessionsView === 'calendrier' ? '#9a9a9a' : 'transparent', color: sessionsView === 'calendrier' ? '#fff' : 'var(--text-muted)' }}
                   >
                     <Icon name="calendar" size={14} />
                   </button>
