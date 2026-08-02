@@ -484,10 +484,13 @@ footer.page-footer { color: var(--text-muted); font-size: 13px; padding-top: 20p
   padding: 0 14px;
   text-align: center;
 }
+/* top = hauteur de l'icône (48px) + sa marge (14px) + moitié du numéro (13px)
+   — la ligne pointillée doit rester au niveau du numéro, plus bas maintenant
+   que l'icône passe au-dessus. */
 .timeline-step:not(:last-child)::after {
   content: '';
   position: absolute;
-  top: 15px;
+  top: 75px;
   left: calc(50% + 22px);
   width: calc(100% - 44px);
   height: 2px;

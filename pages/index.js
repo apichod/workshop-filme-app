@@ -945,10 +945,10 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
             <div className="timeline">
               {[1, 2, 3, 4].map((n, i) => (
                 <div className="timeline-step" key={n}>
-                  <div className="timeline-dot">{n}</div>
                   <div className="timeline-icon">
                     <Icon name={['cap', 'calendar', 'bell', 'mail'][i]} size={22} />
                   </div>
+                  <div className="timeline-dot">{n}</div>
                   <EditableText
                     isAdmin={isAdmin}
                     tag="p"
