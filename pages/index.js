@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Head from 'next/head';
 import { getOpenSessions } from '../lib/sessions';
 import { getVisibleTopics, getAllTopics, CAPACITY, VALIDATION_THRESHOLD, PRICE_LABEL, TOPIC_CATEGORIES, TOPIC_TYPES, nextSaturdays, yearSaturdays, formatSaturday, formatPrice } from '../lib/topics';
@@ -788,6 +788,49 @@ function TermsModal({ isAdmin, text, onSave, onClose }) {
   );
 }
 
+// ─── Filtre "Type" du planning (Formations à venir) ──────────────────────────
+function SessionTypeFilter({ options, selected, onToggle, onReset }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    function onClickOutside(e) {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    }
+    document.addEventListener('mousedown', onClickOutside);
+    return () => document.removeEventListener('mousedown', onClickOutside);
+  }, []);
+
+  return (
+    <div className="filter-dropdown" ref={ref}>
+      <button
+        type="button"
+        className={`filter-trigger ${selected.length ? 'active' : ''}`}
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+      >
+        Type <Icon name="chevronDown" size={13} />
+      </button>
+      {open && (
+        <div className="filter-panel">
+          <div className="filter-panel-head">
+            <strong>Type</strong>
+            <button type="button" className="filter-panel-reset" onClick={onReset}>Réinitialiser</button>
+          </div>
+          <div className="checkbox-list">
+            {options.map((t) => (
+              <label className="checkbox-item" key={t}>
+                <input type="checkbox" checked={selected.includes(t)} onChange={() => onToggle(t)} />
+                {t}
+              </label>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function Home({ initialSessions, initialTopics, initialContent, initialClosedDates, isAdmin, session }) {
   const [sessions, setSessions] = useState(initialSessions);
   const [topics, setTopics] = useState(initialTopics);
@@ -801,10 +844,12 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
   const [categoryFilter, setCategoryFilter] = useState('');
   const [closedDates, setClosedDates] = useState(initialClosedDates || []);
   const [sessionSort, setSessionSort] = useState('rate'); // 'rate' (défaut) ou 'date'
+  const [sessionTypeFilter, setSessionTypeFilter] = useState([]); // types cochés dans "Filtrer par : Type" ([] = tous)
 
   const saturdays = nextSaturdays(8, closedDates);
   const selectableTopics = topics.filter((t) => !t.archived);
   const usedCategories = TOPIC_CATEGORIES.filter((c) => topics.some((t) => t.category === c));
+  const usedSessionTypes = [...new Set(sessions.map((s) => s.topic?.type || 'Formation'))];
   // Les formations archivées sont reléguées à la fin de la grille (tri stable
   // par ailleurs : sort() est stable en JS, l'ordre existant est préservé).
   const filteredTopics = (categoryFilter ? topics.filter((t) => t.category === categoryFilter) : topics)
@@ -815,6 +860,13 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
       ? a.dateIso.localeCompare(b.dateIso)
       : b.rate - a.rate || a.dateIso.localeCompare(b.dateIso)
   );
+  const visibleSessions = sessionTypeFilter.length
+    ? sortedSessions.filter((s) => sessionTypeFilter.includes(s.topic?.type || 'Formation'))
+    : sortedSessions;
+
+  function toggleSessionType(t) {
+    setSessionTypeFilter((list) => (list.includes(t) ? list.filter((x) => x !== t) : [...list, t]));
+  }
   const modalTopic = modal ? topics.find((t) => t.id === modal.topicId) : null;
 
   function updateTopicInList(updated) {
@@ -992,6 +1044,17 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
               <EditableText isAdmin={isAdmin} tag="span" className="hint" value={content.sessions_hint} onSave={(v) => saveContent('sessions_hint', v)} />
             </div>
           </div>
+          {sessions.length > 0 && usedSessionTypes.length > 1 && (
+            <div className="filter-row">
+              <span className="sort-label">Filtrer par :</span>
+              <SessionTypeFilter
+                options={usedSessionTypes}
+                selected={sessionTypeFilter}
+                onToggle={toggleSessionType}
+                onReset={() => setSessionTypeFilter([])}
+              />
+            </div>
+          )}
           {sessions.length > 0 && (
             <div className="sort-row">
               <span className="sort-label">Trier par :</span>
@@ -1010,8 +1073,13 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
                 <div className="empty-icon">📅</div>
                 Aucune session pour le moment. Choisissez une formation ci-dessous pour proposer un samedi.
               </div>
+            ) : visibleSessions.length === 0 ? (
+              <div className="empty">
+                <div className="empty-icon">📅</div>
+                Aucune session ne correspond à ce filtre.
+              </div>
             ) : (
-              sortedSessions.map((s) => {
+              visibleSessions.map((s) => {
                 // La barre représente la capacité max (1 inscrit = 1/capacity de la
                 // largeur), et le remplissage passe au vert une fois le seuil de
                 // validation atteint.

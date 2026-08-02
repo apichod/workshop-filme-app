@@ -404,6 +404,58 @@ h1, h2, h3, .section-head h2, .topic-card h3 { font-family: var(--font-heading-f
 }
 .sort-select:focus { outline: none; }
 
+/* ─── Filtre (menu déroulant "Filtrer par : Type") ─────────────────────────── */
+
+.filter-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.filter-dropdown { position: relative; display: inline-flex; align-items: center; }
+.filter-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  padding: 2px 0;
+  cursor: pointer;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+}
+.filter-trigger.active { text-decoration: underline; text-underline-offset: 3px; }
+.filter-panel {
+  position: absolute;
+  top: 26px;
+  left: 0;
+  z-index: 50;
+  background: #fff;
+  border: 1px solid rgba(18, 18, 18, 0.12);
+  border-radius: var(--radius);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  min-width: 220px;
+  padding: 14px;
+}
+.filter-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 10px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+.filter-panel-head strong { font-size: 14px; }
+.filter-panel-reset {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 13px;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.filter-panel .checkbox-list { max-height: none; }
+
 /* ─── Grille des formations ────────────────────────────────────────────────── */
 
 .topics-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
