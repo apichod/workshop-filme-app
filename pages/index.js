@@ -959,13 +959,14 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
               ))}
             </div>
             <div className="engagement-note">
-              <div className="en-text">
-                <span className="en-icon"><Icon name="info" size={18} /></span>
-                <EditableText isAdmin={isAdmin} tag="p" multiline value={content.engagement_note} onSave={(v) => saveContent('engagement_note', v)} />
-              </div>
-              <button type="button" className="link-btn" onClick={() => setShowTerms(true)}>
-                Conditions générales de participation <Icon name="arrowRight" size={14} />
-              </button>
+              <span className="en-icon"><Icon name="info" size={18} /></span>
+              <p>
+                <EditableText isAdmin={isAdmin} tag="span" multiline value={content.engagement_note} onSave={(v) => saveContent('engagement_note', v)} />
+                {' '}
+                <button type="button" className="link-btn" onClick={() => setShowTerms(true)}>
+                  Voir les conditions générales <Icon name="arrowRight" size={14} />
+                </button>
+              </p>
             </div>
           </div>
         </section>

@@ -525,9 +525,7 @@ footer.page-footer { color: var(--text-muted); font-size: 13px; padding-top: 20p
 .engagement-note {
   display: flex;
   align-items: flex-start;
-  justify-content: space-between;
-  gap: 20px;
-  flex-wrap: wrap;
+  gap: 12px;
   background: rgba(245, 158, 11, 0.08);
   border: 1px solid rgba(245, 158, 11, 0.25);
   border-radius: var(--radius);
@@ -536,10 +534,10 @@ footer.page-footer { color: var(--text-muted); font-size: 13px; padding-top: 20p
   color: var(--text);
   line-height: 1.6;
 }
-.engagement-note .en-text { display: flex; align-items: flex-start; gap: 12px; flex: 1 1 380px; }
 .engagement-note .en-icon { color: #d97706; margin-top: 2px; flex-shrink: 0; }
 .engagement-note p { margin: 0; }
-.engagement-note .link-btn { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; flex-shrink: 0; }
+/* Le lien suit le texte, dans le même paragraphe (pas plaqué à droite) */
+.engagement-note .link-btn { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
 
 /* ─── Bande de réassurance (bas de page) ──────────────────────────────────── */
 .feature-strip {
