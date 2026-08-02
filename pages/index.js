@@ -63,31 +63,80 @@ function BulletIconPicker({ isAdmin, icon, onChange }) {
   );
 }
 
-// ─── Ligne de pastilles icône + texte, en ligne (réutilisée par les 3 bannières) ───
-function HeroPillRow({ isAdmin, content, saveContent, items }) {
-  return (
-    <div className="hero-stats">
-      {items.map(({ textKey, iconKey, defaultIcon }) => (
-        <div className="stat-item" key={textKey}>
-          <BulletIconPicker
-            isAdmin={isAdmin}
-            icon={content[iconKey] || defaultIcon}
-            onChange={(name) => saveContent(iconKey, name)}
-          />
-          <EditableText isAdmin={isAdmin} tag="strong" value={content[textKey]} onSave={(v) => saveContent(textKey, v)} />
-        </div>
-      ))}
-    </div>
-  );
+// ─── Une bannière Hero du carrousel — titre + texte + puces + CTA, toutes
+// éditables en place (mode admin). Toutes les bannières ont la même
+// structure (contrairement à l'ancienne version où la 1ère bannière était un
+// cas particulier) : elles sont interchangeables, ajoutables et supprimables
+// depuis l'admin (cf. addHero/removeHero dans Home).
+function DEFAULT_HERO_BULLETS() {
+  return [
+    { text: '', icon: 'users' },
+    { text: '', icon: 'camera' },
+    { text: '', icon: 'user' },
+    { text: '', icon: 'shield' },
+  ];
 }
 
-// ─── Bannière Hero n°2/3 — titre + texte + liste à puces, éditables ──────────
-function HeroInfoSlide({ isAdmin, content, saveContent, titleKey, leadKey, bullets }) {
+function newHero() {
+  return {
+    id: `hero-${Date.now()}`,
+    title: 'Nouvelle bannière',
+    lead: '',
+    bullets: DEFAULT_HERO_BULLETS(),
+    ctaText: '',
+    ctaLink: '',
+  };
+}
+
+// Lit la liste des bannières depuis le JSON stocké dans content.heroes_json —
+// tableau vide (jamais d'exception) si absent/invalide, pour laisser
+// l'appelant décider du repli (bannières par défaut).
+function parseHeroes(raw) {
+  try {
+    const arr = JSON.parse(raw);
+    return Array.isArray(arr) ? arr : [];
+  } catch {
+    return [];
+  }
+}
+
+function HeroSlideEditor({ isAdmin, hero, onChange }) {
+  const bullets = hero.bullets && hero.bullets.length ? hero.bullets : DEFAULT_HERO_BULLETS();
+
+  function updateBullet(i, patch) {
+    onChange({ bullets: bullets.map((b, bi) => (bi === i ? { ...b, ...patch } : b)) });
+  }
+
   return (
     <div className="hero-copy">
-      <EditableText isAdmin={isAdmin} tag="h1" value={content[titleKey]} onSave={(v) => saveContent(titleKey, v)} />
-      <EditableText isAdmin={isAdmin} tag="p" className="lead" multiline value={content[leadKey]} onSave={(v) => saveContent(leadKey, v)} />
-      <HeroPillRow isAdmin={isAdmin} content={content} saveContent={saveContent} items={bullets} />
+      <EditableText isAdmin={isAdmin} tag="h1" value={hero.title} onSave={(v) => onChange({ title: v })} />
+      <EditableText isAdmin={isAdmin} tag="p" className="lead" multiline value={hero.lead} onSave={(v) => onChange({ lead: v })} />
+      <div className="hero-stats">
+        {bullets.map((b, i) => (
+          <div className="stat-item" key={i}>
+            <BulletIconPicker isAdmin={isAdmin} icon={b.icon || 'users'} onChange={(name) => updateBullet(i, { icon: name })} />
+            <EditableText isAdmin={isAdmin} tag="strong" value={b.text} onSave={(v) => updateBullet(i, { text: v })} />
+          </div>
+        ))}
+      </div>
+      {(isAdmin || (hero.ctaText && hero.ctaLink)) && (
+        <div className="hero-cta-row">
+          <a
+            className="hero-cta"
+            href={hero.ctaLink || '#'}
+            onClick={(e) => { if (isAdmin) e.preventDefault(); }}
+          >
+            <EditableText isAdmin={isAdmin} tag="span" value={hero.ctaText || (isAdmin ? 'Texte du bouton' : '')} onSave={(v) => onChange({ ctaText: v })} />
+            <Icon name="arrowRight" size={14} />
+          </a>
+          {isAdmin && (
+            <span className="hero-cta-link-edit">
+              Lien :{' '}
+              <EditableText isAdmin={isAdmin} tag="span" value={hero.ctaLink || ''} onSave={(v) => onChange({ ctaLink: v })} />
+            </span>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -2177,13 +2226,19 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
   const [content, setContent] = useState(initialContent);
   const [formateurs, setFormateurs] = useState(initialFormateurs || []);
   const [heroSlide, setHeroSlide] = useState(0);
+  // Bannières Hero : liste dynamique (ajout/suppression depuis l'admin),
+  // repli sur les bannières par défaut si le JSON est absent/invalide.
+  const parsedHeroes = parseHeroes(content.heroes_json);
+  const heroes = parsedHeroes.length ? parsedHeroes : parseHeroes(CONTENT_DEFAULTS.heroes_json);
+  const safeHeroSlide = Math.min(heroSlide, heroes.length - 1);
   // Défilement automatique du carrousel Hero (visiteurs uniquement — coupé en
   // mode admin pour ne pas changer de slide pendant une édition en cours).
   useEffect(() => {
     if (isAdmin) return;
-    const id = setInterval(() => setHeroSlide((s) => (s + 1) % 3), 6000);
+    if (heroes.length <= 1) return;
+    const id = setInterval(() => setHeroSlide((s) => (s + 1) % heroes.length), 6000);
     return () => clearInterval(id);
-  }, [heroSlide, isAdmin]);
+  }, [heroSlide, isAdmin, heroes.length]);
   const [modal, setModal] = useState(null); // { topicId, dates: string[] }
   const [showModalTopicDetail, setShowModalTopicDetail] = useState(false);
   const [form, setForm] = useState({ name: '', email: '' });
@@ -2282,6 +2337,27 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
     } catch (err) {
       alert(err.message || "Erreur lors de l'enregistrement");
     }
+  }
+
+  // Bannières Hero — toute la liste est réenregistrée à chaque modification
+  // (une seule clé JSON en base, cf. lib/content.js heroes_json).
+  function updateHeroes(nextHeroes) {
+    saveContent('heroes_json', JSON.stringify(nextHeroes));
+  }
+  function updateHero(index, patch) {
+    updateHeroes(heroes.map((h, i) => (i === index ? { ...h, ...patch } : h)));
+  }
+  function addHero() {
+    const next = [...heroes, newHero()];
+    updateHeroes(next);
+    setHeroSlide(next.length - 1);
+  }
+  function removeHero(index) {
+    if (heroes.length <= 1) return;
+    if (!confirm('Supprimer cette bannière ?')) return;
+    const next = heroes.filter((_, i) => i !== index);
+    updateHeroes(next);
+    setHeroSlide((s) => Math.min(s, next.length - 1));
   }
 
   async function toggleClosedDate(dateIso, closed) {
@@ -2416,69 +2492,39 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
           <ImgPlaceholder iconSize={40} />
         </div>
         <div className="hero-banner-inner">
-          {heroSlide === 0 && (
-            <div className="hero-copy">
-              <EditableText isAdmin={isAdmin} tag="h1" value={content.hero_title} onSave={(v) => saveContent('hero_title', v)} />
-              <EditableText isAdmin={isAdmin} tag="p" className="lead" multiline value={content.hero_lead} onSave={(v) => saveContent('hero_lead', v)} />
-              <HeroPillRow
-                isAdmin={isAdmin}
-                content={content}
-                saveContent={saveContent}
-                items={[
-                  { textKey: 'price_label', iconKey: 'price_label_icon', defaultIcon: 'price' },
-                  { textKey: 'pill_capacity', iconKey: 'pill_capacity_icon', defaultIcon: 'users' },
-                  { textKey: 'pill_validation', iconKey: 'pill_validation_icon', defaultIcon: 'check' },
-                  { textKey: 'pill_audience', iconKey: 'pill_audience_icon', defaultIcon: 'shield' },
-                ]}
-              />
+          <HeroSlideEditor
+            isAdmin={isAdmin}
+            hero={heroes[safeHeroSlide]}
+            onChange={(patch) => updateHero(safeHeroSlide, patch)}
+          />
+          {isAdmin && (
+            <div className="hero-admin-actions">
+              <button type="button" className="btn btn-ghost btn-sm" onClick={addHero}>+ Ajouter une bannière</button>
+              <button type="button" className="btn btn-ghost btn-sm" onClick={() => removeHero(safeHeroSlide)} disabled={heroes.length <= 1}>
+                Supprimer cette bannière
+              </button>
             </div>
           )}
-          {heroSlide === 1 && (
-            <HeroInfoSlide
-              isAdmin={isAdmin}
-              content={content}
-              saveContent={saveContent}
-              titleKey="hero2_title"
-              leadKey="hero2_lead"
-              bullets={[
-                { textKey: 'hero2_bullet_1', iconKey: 'hero2_bullet_1_icon', defaultIcon: 'users' },
-                { textKey: 'hero2_bullet_2', iconKey: 'hero2_bullet_2_icon', defaultIcon: 'camera' },
-                { textKey: 'hero2_bullet_3', iconKey: 'hero2_bullet_3_icon', defaultIcon: 'user' },
-                { textKey: 'hero2_bullet_4', iconKey: 'hero2_bullet_4_icon', defaultIcon: 'shield' },
-              ]}
-            />
-          )}
-          {heroSlide === 2 && (
-            <HeroInfoSlide
-              isAdmin={isAdmin}
-              content={content}
-              saveContent={saveContent}
-              titleKey="hero3_title"
-              leadKey="hero3_lead"
-              bullets={[
-                { textKey: 'hero3_bullet_1', iconKey: 'hero3_bullet_1_icon', defaultIcon: 'users' },
-                { textKey: 'hero3_bullet_2', iconKey: 'hero3_bullet_2_icon', defaultIcon: 'camera' },
-                { textKey: 'hero3_bullet_3', iconKey: 'hero3_bullet_3_icon', defaultIcon: 'user' },
-                { textKey: 'hero3_bullet_4', iconKey: 'hero3_bullet_4_icon', defaultIcon: 'shield' },
-              ]}
-            />
-          )}
         </div>
 
-        <button type="button" className="hero-arrow hero-arrow-prev" onClick={() => setHeroSlide((s) => (s + 2) % 3)} aria-label="Bannière précédente">‹</button>
-        <button type="button" className="hero-arrow hero-arrow-next" onClick={() => setHeroSlide((s) => (s + 1) % 3)} aria-label="Bannière suivante">›</button>
+        {heroes.length > 1 && (
+          <>
+            <button type="button" className="hero-arrow hero-arrow-prev" onClick={() => setHeroSlide((s) => (s + heroes.length - 1) % heroes.length)} aria-label="Bannière précédente">‹</button>
+            <button type="button" className="hero-arrow hero-arrow-next" onClick={() => setHeroSlide((s) => (s + 1) % heroes.length)} aria-label="Bannière suivante">›</button>
 
-        <div className="hero-dots">
-          {[0, 1, 2].map((i) => (
-            <button
-              key={i}
-              type="button"
-              className={`hero-dot ${heroSlide === i ? 'active' : ''}`}
-              onClick={() => setHeroSlide(i)}
-              aria-label={`Aller à la bannière ${i + 1}`}
-            />
-          ))}
-        </div>
+            <div className="hero-dots">
+              {heroes.map((h, i) => (
+                <button
+                  key={h.id || i}
+                  type="button"
+                  className={`hero-dot ${safeHeroSlide === i ? 'active' : ''}`}
+                  onClick={() => setHeroSlide(i)}
+                  aria-label={`Aller à la bannière ${i + 1}`}
+                />
+              ))}
+            </div>
+          </>
+        )}
       </section>
 
       <div className="page" style={isAdmin ? { paddingBottom: 70 } : undefined}>
