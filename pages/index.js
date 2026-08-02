@@ -1553,10 +1553,15 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
         <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && closeModal()}>
           <div className="modal">
             <button className="modal-close" onClick={closeModal}>✕</button>
-            <h2>S'inscrire à un workshop</h2>
+            <h2>S'inscrire à un événement</h2>
             <div className="modal-sub">
               {formatPrice(modalTopic?.price)} — {modalTopic?.maxParticipants || CAPACITY} places maximum
-              {modalTopic?.fixedDate ? '' : " · Dates flexibles : choisis tes dispos pour cette formation et si une date atteint le minimum d'inscriptions requises elle sera validée."}
+              {!modalTopic?.fixedDate && (
+                <>
+                  <br />
+                  Dates flexibles : choisis tes dispos pour cette formation et si une date atteint le minimum d'inscriptions requises elle sera validée.
+                </>
+              )}
             </div>
 
             <form onSubmit={submit}>
@@ -1575,10 +1580,10 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
                   <button
                     type="button"
                     className="link-btn"
-                    style={{ marginTop: 6, alignSelf: 'flex-start', textAlign: 'left' }}
+                    style={{ marginTop: 6, alignSelf: 'flex-start', textAlign: 'left', display: 'inline-flex', alignItems: 'center', gap: 4 }}
                     onClick={() => setShowModalTopicDetail(true)}
                   >
-                    En savoir plus
+                    <Icon name="info" size={13} /> En savoir plus sur cet événement
                   </button>
                 )}
               </div>
@@ -1598,7 +1603,7 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
               ) : (
                 <div className="form-group">
                   <label className="form-label">
-                    {scheduleOption(modalTopic?.scheduleMode).plural} ({modal.dates.length} sélectionné{modal.dates.length > 1 ? 's' : ''})
+                    Date(s) souhaitée(s) ({modal.dates.length} sélectionné{modal.dates.length > 1 ? 's' : ''})
                   </label>
                   <div className="checkbox-list">
                     {modalDates.map((d) => {
