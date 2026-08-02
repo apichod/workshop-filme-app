@@ -329,8 +329,8 @@ h1, h2, h3, .section-head h2, .topic-card h3 { font-family: var(--font-heading-f
 /* h2 desktop du thème Dawn : calc(--font-heading-scale * 2.2rem) = 22px */
 /* display:flex (pas inline-flex) pour que h2 reste un bloc — sinon le .hint
    qui suit en sibling se retrouve sur la même ligne au lieu de passer dessous. */
-.section-head h2 { font-size: 22px; font-weight: 400; }
-.section-head .hint { color: var(--text-muted); font-size: 14px; }
+.section-head h2 { font-size: 26px; font-weight: 400; }
+.section-head .hint { display: block; color: var(--text-muted); font-size: 16px; margin-top: 6px; }
 
 /* ─── Graph horizontal des sessions ──────────────────────────────────────── */
 
