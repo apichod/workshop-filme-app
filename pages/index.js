@@ -2308,7 +2308,7 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
     }
 
     requestAnimationFrame(() => {
-      document.getElementById('evenements')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      document.getElementById('catalogue')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -2602,7 +2602,7 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
       )}
 
       <div className="page" style={isAdmin ? { paddingBottom: 70 } : undefined}>
-        <section className="section">
+        <section className="section" id="agenda" style={{ scrollMarginTop: 24 }}>
           <div className="section-head">
             <div>
               <EditableText isAdmin={isAdmin} tag="h2" value={content.sessions_heading} onSave={(v) => saveContent('sessions_heading', v)} />
@@ -2759,7 +2759,7 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
           </div>
         </section>
 
-        <section className="section" id="evenements" style={{ scrollMarginTop: 24 }}>
+        <section className="section" id="catalogue" style={{ scrollMarginTop: 24 }}>
           <div className="section-head" style={{ alignItems: 'flex-start', justifyContent: 'space-between' }}>
             <div>
               <EditableText isAdmin={isAdmin} tag="h2" value={content.topics_heading} onSave={(v) => saveContent('topics_heading', v)} />
