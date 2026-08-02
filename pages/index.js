@@ -2774,7 +2774,8 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
 
         <section className="section">
           <div style={{ padding: '28px 0' }}>
-            <div className="timeline">
+            <EditableText isAdmin={isAdmin} tag="h2" value={content.timeline_heading} onSave={(v) => saveContent('timeline_heading', v)} />
+            <div className="timeline" style={{ marginTop: 20 }}>
               {[1, 2, 3, 4].map((n, i) => (
                 <div className="timeline-step" key={n}>
                   <div className="timeline-icon">
