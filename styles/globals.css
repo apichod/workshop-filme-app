@@ -266,7 +266,12 @@ h1, h2, h3, .section-head h2, .topic-card h3 { font-family: var(--font-heading-f
   margin-right: calc(50% - 50vw);
   color: #fff;
   margin-bottom: 40px;
-  overflow: hidden;
+  /* Pas d'overflow:hidden ici non plus (cf. .hero-banner-inner ci-dessous) :
+     ce conteneur EXTÉRIEUR coupait encore le sélecteur d'icône même après
+     avoir retiré l'overflow de .hero-banner-inner, car .hero-banner-inner
+     est un enfant de .hero-banner. Le fond (.hero-bg, inset:0) et les
+     flèches du carrousel restent visuellement contenus car ils épousent
+     exactement les bords du bandeau, donc rien à clipper ici. */
   min-height: 380px;
   display: flex;
   align-items: center;
