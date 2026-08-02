@@ -1085,18 +1085,25 @@ const WEEKDAYS = [
   { key: 'dimanche', label: 'Dimanche' },
 ];
 
-// Complète les jours manquants par un tableau vide — pour toujours itérer sur
-// les 7 jours quel que soit l'état (partiel ou vide) stocké en base.
+// Heures rondes seulement (pas de minutes) pour les créneaux de disponibilité.
+const AVAILABILITY_HOURS = Array.from({ length: 24 }, (_, h) => `${String(h).padStart(2, '0')}:00`);
+
+// Complète les jours manquants par un tableau vide, et la liste de dates
+// ponctuelles — pour toujours itérer sur une forme complète quel que soit
+// l'état (partiel ou vide) stocké en base.
 function normalizeAvailability(a) {
   const base = {};
   WEEKDAYS.forEach((d) => { base[d.key] = Array.isArray(a?.[d.key]) ? a[d.key] : []; });
+  base.dates = Array.isArray(a?.dates) ? a.dates : [];
   return base;
 }
 
-// Éditeur "agenda" des disponibilités — un ou plusieurs créneaux horaires
-// précis (ex : 09:00–12:00) par jour de la semaine, récurrents chaque semaine.
+// Éditeur "agenda" des disponibilités : un ou plusieurs créneaux horaires
+// (heures rondes) par jour de la semaine, récurrents chaque semaine, plus un
+// calendrier pour ajouter des dates ponctuelles de disponibilité.
 function AvailabilityEditor({ value, onChange }) {
   const [drafts, setDrafts] = useState(() => WEEKDAYS.reduce((acc, d) => ({ ...acc, [d.key]: { start: '', end: '' } }), {}));
+  const [dateDraft, setDateDraft] = useState('');
 
   function setDraft(day, field, v) {
     setDrafts((d) => ({ ...d, [day]: { ...d[day], [field]: v } }));
@@ -1116,46 +1123,81 @@ function AvailabilityEditor({ value, onChange }) {
     onChange({ ...value, [day]: dayList });
   }
 
+  function addDate() {
+    if (!dateDraft) return;
+    const dates = value.dates || [];
+    if (dates.includes(dateDraft)) { setDateDraft(''); return; }
+    onChange({ ...value, dates: [...dates, dateDraft].sort() });
+    setDateDraft('');
+  }
+
+  function removeDate(idx) {
+    const dates = (value.dates || []).slice();
+    dates.splice(idx, 1);
+    onChange({ ...value, dates });
+  }
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-      {WEEKDAYS.map((d) => (
-        <div key={d.key} style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-          <div style={{ width: 84, fontSize: 13, fontWeight: 600, flexShrink: 0 }}>{d.label}</div>
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-            {(value[d.key] || []).map((slot, i) => (
-              <span key={i} className="badge badge-blue" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                {slot.start}–{slot.end}
+    <div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {WEEKDAYS.map((d) => (
+          <div key={d.key} style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+            <div style={{ width: 84, fontSize: 13, fontWeight: 600, flexShrink: 0 }}>{d.label}</div>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+              {(value[d.key] || []).map((slot, i) => (
+                <span key={i} className="badge badge-blue" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                  {slot.start}–{slot.end}
+                  <button
+                    type="button"
+                    onClick={() => removeSlot(d.key, i)}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', padding: 0, fontSize: 11, lineHeight: 1 }}
+                    title="Retirer ce créneau"
+                  >
+                    ✕
+                  </button>
+                </span>
+              ))}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <select className="form-input" style={{ width: 84, padding: '6px 8px' }} value={drafts[d.key].start} onChange={(e) => setDraft(d.key, 'start', e.target.value)}>
+                <option value="">--</option>
+                {AVAILABILITY_HOURS.map((h) => <option key={h} value={h}>{h}</option>)}
+              </select>
+              <span style={{ color: 'var(--text-muted)' }}>–</span>
+              <select className="form-input" style={{ width: 84, padding: '6px 8px' }} value={drafts[d.key].end} onChange={(e) => setDraft(d.key, 'end', e.target.value)}>
+                <option value="">--</option>
+                {AVAILABILITY_HOURS.map((h) => <option key={h} value={h}>{h}</option>)}
+              </select>
+              <button type="button" className="btn btn-ghost btn-sm" onClick={() => addSlot(d.key)}>+ Ajouter</button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div style={{ marginTop: 16, paddingTop: 14, borderTop: '1px solid var(--border)' }}>
+        <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>Dates spécifiques</div>
+        {(value.dates || []).length > 0 && (
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
+            {(value.dates || []).map((dateIso, i) => (
+              <span key={dateIso} className="badge badge-blue" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                {formatSaturday(dateIso)}
                 <button
                   type="button"
-                  onClick={() => removeSlot(d.key, i)}
+                  onClick={() => removeDate(i)}
                   style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', padding: 0, fontSize: 11, lineHeight: 1 }}
-                  title="Retirer ce créneau"
+                  title="Retirer cette date"
                 >
                   ✕
                 </button>
               </span>
             ))}
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-            <input
-              type="time"
-              className="form-input"
-              style={{ width: 108, padding: '6px 8px' }}
-              value={drafts[d.key].start}
-              onChange={(e) => setDraft(d.key, 'start', e.target.value)}
-            />
-            <span style={{ color: 'var(--text-muted)' }}>–</span>
-            <input
-              type="time"
-              className="form-input"
-              style={{ width: 108, padding: '6px 8px' }}
-              value={drafts[d.key].end}
-              onChange={(e) => setDraft(d.key, 'end', e.target.value)}
-            />
-            <button type="button" className="btn btn-ghost btn-sm" onClick={() => addSlot(d.key)}>+ Ajouter</button>
-          </div>
+        )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <input type="date" className="form-input" style={{ width: 160, padding: '6px 8px' }} value={dateDraft} onChange={(e) => setDateDraft(e.target.value)} />
+          <button type="button" className="btn btn-ghost btn-sm" onClick={addDate}>+ Ajouter</button>
         </div>
-      ))}
+      </div>
     </div>
   );
 }
@@ -1269,7 +1311,8 @@ function FormateurForm({ formateur, onCancel, onSaved, topics, onTopicUpdated })
           <AvailabilityEditor value={form.availability} onChange={(v) => set('availability', v)} />
         </div>
         <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
-          Créneaux horaires récurrents chaque semaine — usage interne pour la planification, non affichés publiquement.
+          Créneaux horaires récurrents chaque semaine, plus des dates ponctuelles si besoin — usage interne pour la
+          planification, non affichés publiquement.
         </div>
       </div>
 
