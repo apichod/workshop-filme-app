@@ -1385,7 +1385,7 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
           <a href="https://www.filme.fr" title="Retour à filme.fr">
             <img src="https://www.filme.fr/cdn/shop/files/Filme-Logo-sd.svg?v=1707646401&width=120" alt="Filme" className="logo" />
           </a>
-          <nav className="breadcrumb"><a href="https://www.filme.fr">Home</a> {'>'} Workshops</nav>
+          <nav className="breadcrumb"><a href="https://www.filme.fr">Home</a> {'>'} Événements</nav>
         </div>
       </div>
 
