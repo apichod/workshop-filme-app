@@ -2541,6 +2541,17 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
         <div className="hero-bg">
           <ImgPlaceholder iconSize={40} />
         </div>
+
+        {isAdmin && (
+          <div className="hero-admin-actions">
+            <button type="button" onClick={addHero}>+ Ajouter une bannière</button>
+            <button type="button" onClick={() => duplicateHero(safeHeroSlide)}>⧉ Dupliquer cette bannière</button>
+            <button type="button" onClick={() => removeHero(safeHeroSlide)} disabled={heroes.length <= 1}>
+              Supprimer cette bannière
+            </button>
+          </div>
+        )}
+
         <div className="hero-banner-inner">
           <HeroSlideEditor
             isAdmin={isAdmin}
@@ -2568,16 +2579,6 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
           </>
         )}
       </section>
-
-      {isAdmin && (
-        <div className="hero-admin-actions">
-          <button type="button" className="btn btn-ghost btn-sm" onClick={addHero}>+ Ajouter une bannière</button>
-          <button type="button" className="btn btn-ghost btn-sm" onClick={() => duplicateHero(safeHeroSlide)}>⧉ Dupliquer cette bannière</button>
-          <button type="button" className="btn btn-ghost btn-sm" onClick={() => removeHero(safeHeroSlide)} disabled={heroes.length <= 1}>
-            Supprimer cette bannière
-          </button>
-        </div>
-      )}
 
       <div className="page" style={isAdmin ? { paddingBottom: 70 } : undefined}>
         <section className="section">

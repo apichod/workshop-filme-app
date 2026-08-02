@@ -347,7 +347,32 @@ h1, h2, h3, .section-head h2, .topic-card h3 { font-family: var(--font-heading-f
 }
 .hero-cta:hover { background: #e4e4e4; text-decoration: none; }
 .hero-cta-link-edit { font-size: 12px; color: rgba(255, 255, 255, 0.65); display: inline-flex; align-items: center; gap: 4px; }
-.hero-admin-actions { display: flex; gap: 10px; justify-content: center; padding: 14px 15px 0; flex-wrap: wrap; }
+/* Actions admin (ajouter/dupliquer/supprimer une bannière) — simple texte
+   blanc en haut à droite du bandeau, pas des boutons pleins, pour rester
+   discret par-dessus l'image de fond. */
+.hero-admin-actions {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 2;
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.hero-admin-actions button {
+  background: none;
+  border: none;
+  padding: 0;
+  color: #fff;
+  font-size: 12.5px;
+  font-family: inherit;
+  cursor: pointer;
+  text-decoration: none;
+  opacity: 0.85;
+}
+.hero-admin-actions button:hover:not(:disabled) { opacity: 1; text-decoration: underline; }
+.hero-admin-actions button:disabled { opacity: 0.35; cursor: not-allowed; }
 
 /* Sélecteur d'icône (admin) — cliquer l'icône ouvre une petite grille de choix */
 .icon-picker { position: relative; }
