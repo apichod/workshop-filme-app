@@ -21,6 +21,7 @@ export default requireClientAuth(async function handler(req, res) {
     return res.status(500).json({ error: 'Erreur serveur' });
   }
   if (!customer) return res.status(404).json({ error: 'no_account' });
+  console.log('[my/profile]', req.method, 'client email:', req.client.email, '→ Booqable customer id:', customer.id, customer.email);
 
   if (req.method === 'GET') {
     try {
@@ -34,6 +35,7 @@ export default requireClientAuth(async function handler(req, res) {
 
   if (req.method === 'PATCH') {
     const { name, phone, address } = req.body || {};
+    console.log('[my/profile PATCH] reçu du navigateur:', JSON.stringify({ name, phone, address }));
     const fields = {};
     if (name !== undefined) fields.name = (name || '').trim();
     // Les custom properties (téléphone, adresse) ne s'écrivent PAS via un
@@ -59,6 +61,7 @@ export default requireClientAuth(async function handler(req, res) {
       });
     }
     if (propertiesAttributes.length) fields.properties_attributes = propertiesAttributes;
+    console.log('[my/profile PATCH] fields envoyés à updateCustomer:', JSON.stringify(fields));
     try {
       const profile = await updateCustomer(customer.id, fields);
       return res.status(200).json({ profile });
