@@ -1028,8 +1028,9 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
                     <div className="meta">
                       <ImgPlaceholder className="session-thumb" iconSize={18} />
                       <div className="meta-text">
-                        <div className="topic-title">{s.topic.title}</div>
                         <div className="date-label"><Icon name="calendar" size={13} /> {s.dateLabel}</div>
+                        <div className="topic-title">{s.topic.title}</div>
+                        <div className="topic-meta">{s.topic.type || 'Formation'} · {formatPrice(s.topic.price)}</div>
                       </div>
                     </div>
                     <div className="bar-col">
