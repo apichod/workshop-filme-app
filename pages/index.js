@@ -1862,30 +1862,6 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
           )}
         </section>
 
-        <div className="feature-strip">
-          <div className="feature-item">
-            <span className="icon-circle"><Icon name="users" size={18} /></span>
-            <div>
-              <EditableText isAdmin={isAdmin} tag="strong" value={content.feature_1_title} onSave={(v) => saveContent('feature_1_title', v)} />
-              <EditableText isAdmin={isAdmin} tag="p" value={content.feature_1_desc} onSave={(v) => saveContent('feature_1_desc', v)} />
-            </div>
-          </div>
-          <div className="feature-item">
-            <span className="icon-circle"><Icon name="check" size={18} /></span>
-            <div>
-              <EditableText isAdmin={isAdmin} tag="strong" value={content.feature_2_title} onSave={(v) => saveContent('feature_2_title', v)} />
-              <EditableText isAdmin={isAdmin} tag="p" value={content.feature_2_desc} onSave={(v) => saveContent('feature_2_desc', v)} />
-            </div>
-          </div>
-          <div className="feature-item">
-            <span className="icon-circle"><Icon name="shield" size={18} /></span>
-            <div>
-              <EditableText isAdmin={isAdmin} tag="strong" value={content.feature_3_title} onSave={(v) => saveContent('feature_3_title', v)} />
-              <EditableText isAdmin={isAdmin} tag="p" value={content.feature_3_desc} onSave={(v) => saveContent('feature_3_desc', v)} />
-            </div>
-          </div>
-        </div>
-
         {formateurs.length > 0 && (
           <section className="section">
             <div className="section-head">
