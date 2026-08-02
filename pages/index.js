@@ -275,7 +275,7 @@ function TopicCard({ topic, index, isAdmin, onOpenRegister, onSaved }) {
   return (
     <div className="card topic-card" style={{ opacity: topic.archived ? 0.55 : 1 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
-        <div className="idx">Formation {String(index + 1).padStart(2, '0')}</div>
+        <div className="idx">Formation</div>
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
           {topic.category && <span className={`badge ${categoryStyle(topic.category).badgeClass}`}>{topic.category}</span>}
           {topic.archived && <span className="badge badge-gray">Archivée</span>}
