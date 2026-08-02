@@ -878,21 +878,15 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
             </div>
           </div>
           {sessions.length > 0 && (
-            <div className="category-filter">
-              <button
-                type="button"
-                className={`filter-pill ${sessionSort === 'rate' ? 'active' : ''}`}
-                onClick={() => setSessionSort('rate')}
-              >
-                Taux de remplissage
-              </button>
-              <button
-                type="button"
-                className={`filter-pill ${sessionSort === 'date' ? 'active' : ''}`}
-                onClick={() => setSessionSort('date')}
-              >
-                Date
-              </button>
+            <div className="sort-row">
+              <span className="sort-label">Trier par :</span>
+              <div className="sort-select-wrap">
+                <select className="sort-select" value={sessionSort} onChange={(e) => setSessionSort(e.target.value)}>
+                  <option value="rate">Taux de remplissage</option>
+                  <option value="date">Date</option>
+                </select>
+                <Icon name="chevronDown" size={14} />
+              </div>
             </div>
           )}
           <div className="card">
@@ -989,26 +983,17 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
             )}
           </div>
           {usedCategories.length > 0 && (
-            <div className="category-filter">
-              <button
-                type="button"
-                className={`filter-pill ${!categoryFilter ? 'active' : ''}`}
-                onClick={() => setCategoryFilter('')}
-              >
-                Toutes
-              </button>
-              {usedCategories.map((c) => {
-                return (
-                  <button
-                    key={c}
-                    type="button"
-                    className={`filter-pill ${categoryFilter === c ? 'active' : ''}`}
-                    onClick={() => setCategoryFilter(c)}
-                  >
-                    {c}
-                  </button>
-                );
-              })}
+            <div className="sort-row">
+              <span className="sort-label">Trier par :</span>
+              <div className="sort-select-wrap">
+                <select className="sort-select" value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}>
+                  <option value="">Toutes les catégories</option>
+                  {usedCategories.map((c) => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+                <Icon name="chevronDown" size={14} />
+              </div>
             </div>
           )}
 

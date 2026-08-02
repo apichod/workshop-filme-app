@@ -375,28 +375,31 @@ h1, h2, h3, .section-head h2, .topic-card h3 { font-family: var(--font-heading-f
   .chart-row .action { justify-content: flex-start; }
 }
 
-/* ─── Filtre par catégorie ─────────────────────────────────────────────────── */
+/* ─── Tri (menu déroulant discret "Trier par :") ──────────────────────────── */
 
-/* Style de bouton repris de cvp.com/events (filtres "Location:") : coins
-   légèrement arrondis (pas des pilules), fond blanc + bordure fine à l'état
-   inactif, noir plein à l'état actif. */
-.category-filter { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
-/* Pastilles de filtre — reprises telles quelles de www.filme.fr/blogs/le-blog-de-filme
-   (tags "Tous / Clip / Documentaire…") : pilule pleinement arrondie, fine bordure
-   grise, actif en noir plein. */
-.filter-pill {
-  background: transparent;
-  border: 1px solid rgba(18, 18, 18, 0.15);
-  color: rgba(18, 18, 18, 0.8);
-  font-size: 14px;
-  font-weight: 400;
-  padding: 5px 10px;
-  border-radius: 999px;
-  cursor: pointer;
-  transition: background 0.15s, color 0.15s, border-color 0.15s;
+.sort-row { display: flex; align-items: center; gap: 8px; margin-bottom: 18px; }
+.sort-label { font-size: 14px; color: var(--text-muted); }
+.sort-select-wrap { position: relative; display: inline-flex; align-items: center; }
+.sort-select-wrap .icon { pointer-events: none; }
+.sort-select-wrap svg {
+  position: absolute;
+  right: 2px;
+  color: var(--text-muted);
+  pointer-events: none;
 }
-.filter-pill:hover { border-color: var(--text); }
-.filter-pill.active { background: var(--text); border-color: var(--text); color: #fff; }
+.sort-select {
+  appearance: none;
+  -webkit-appearance: none;
+  background: transparent;
+  border: none;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 4px 22px 4px 2px;
+  cursor: pointer;
+}
+.sort-select:focus { outline: none; }
 
 /* ─── Grille des formations ────────────────────────────────────────────────── */
 
