@@ -1285,8 +1285,8 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
     const count = session?.count || 0;
     const validated = !!session?.validated;
     return validated
-      ? `${count}/${capacity} (Confirmé, reste ${Math.max(0, capacity - count)})`
-      : `${count}/${capacity} (Non confirmé, manque ${Math.max(0, threshold - count)})`;
+      ? `(${count}/${capacity} · confirmé · reste ${Math.max(0, capacity - count)})`
+      : `(${count}/${capacity} · non confirmé · manque ${Math.max(0, threshold - count)})`;
   }
 
   return (
@@ -1559,7 +1559,7 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
               {!modalTopic?.fixedDate && (
                 <>
                   <br />
-                  Dates flexibles : choisis tes dispos pour cette formation et si une date atteint le minimum d'inscriptions requises elle sera validée.
+                  Dates flexibles : choisis tes dispos pour cette formation et si une date atteint le minimum d'inscriptions requises elle sera confirmée.
                 </>
               )}
             </div>
@@ -1595,7 +1595,7 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
                     <div className="checkbox-item">
                       <span>
                         Le {formatSaturday(modalTopic.fixedDate)} — date fixe, non modifiable
-                        <span style={{ color: 'var(--text-muted)' }}> · {dateStatusLabel(modalTopic.fixedDate)}</span>
+                        <span style={{ color: 'var(--text-muted)' }}> {dateStatusLabel(modalTopic.fixedDate)}</span>
                       </span>
                     </div>
                   </div>
@@ -1625,7 +1625,7 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
                             {formatSaturday(d)}
                             {takenByOther
                               ? ' — réservé par une autre formation'
-                              : <span style={{ color: 'var(--text-muted)' }}> · {dateStatusLabel(d)}</span>}
+                              : <span style={{ color: 'var(--text-muted)' }}> {dateStatusLabel(d)}</span>}
                           </span>
                         </label>
                       );
