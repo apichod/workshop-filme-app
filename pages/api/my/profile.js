@@ -1,5 +1,5 @@
 import { requireClientAuth } from '../../../lib/auth';
-import { getCustomerByEmail, getCustomerProfile, updateCustomer } from '../../../lib/booqable';
+import { getCustomerByEmail, getCustomerIdByUserEmail, getCustomerProfile, updateCustomer } from '../../../lib/booqable';
 
 // Profil Booqable du client connecté — popup "Mon profil" (cf. UserBar).
 // Ne concerne que les vrais clients Booqable : un formateur n'a pas de fiche
@@ -10,22 +10,33 @@ export default requireClientAuth(async function handler(req, res) {
   if (req.client.isFormateur) return res.status(403).json({ error: 'no_account' });
 
   // Le customer id Booqable n'est jamais stocké dans le cookie de session
-  // (cf. lib/auth.js) — on le retrouve à chaque appel via l'email, avec la
-  // même vérification stricte que getCustomerByEmail (le filtre Booqable
-  // peut être ignoré côté API, cf. booqable-client-mechanism.docx §2.1).
-  let customer;
+  // (cf. lib/auth.js) — on le retrouve à chaque appel via l'email.
+  // 1) On tente d'abord via la ressource "users" (compte de connexion
+  //    storefront) : son champ customer_id est un lien unique et fiable vers
+  //    LE bon client, sans ambiguïté.
+  // 2) Repli sur la recherche dans "customers" par email (comme avant) si
+  //    aucun compte "user" n'existe pour cet email — la liste "customers" peut
+  //    elle contenir plusieurs fiches avec le même email (doublons), auquel
+  //    cas ce repli peut se tromper de fiche.
+  let customerId;
+  let customerEmail = req.client.email;
   try {
-    customer = await getCustomerByEmail(req.client.email);
+    customerId = await getCustomerIdByUserEmail(req.client.email);
+    if (!customerId) {
+      const customer = await getCustomerByEmail(req.client.email);
+      customerId = customer?.id || null;
+      customerEmail = customer?.email || customerEmail;
+    }
   } catch (err) {
-    console.error('[my/profile] getCustomerByEmail', err);
+    console.error('[my/profile] résolution customer id', err);
     return res.status(500).json({ error: 'Erreur serveur' });
   }
-  if (!customer) return res.status(404).json({ error: 'no_account' });
-  console.log('[my/profile]', req.method, 'client email:', req.client.email, '→ Booqable customer id:', customer.id, customer.email);
+  if (!customerId) return res.status(404).json({ error: 'no_account' });
+  console.log('[my/profile]', req.method, 'client email:', req.client.email, '→ Booqable customer id:', customerId, customerEmail);
 
   if (req.method === 'GET') {
     try {
-      const profile = await getCustomerProfile(customer.id);
+      const profile = await getCustomerProfile(customerId);
       return res.status(200).json({ profile });
     } catch (err) {
       console.error('[my/profile GET]', err);
@@ -63,7 +74,7 @@ export default requireClientAuth(async function handler(req, res) {
     if (propertiesAttributes.length) fields.properties_attributes = propertiesAttributes;
     console.log('[my/profile PATCH] fields envoyés à updateCustomer:', JSON.stringify(fields));
     try {
-      const profile = await updateCustomer(customer.id, fields);
+      const profile = await updateCustomer(customerId, fields);
       return res.status(200).json({ profile });
     } catch (err) {
       console.error('[my/profile PATCH]', err);
