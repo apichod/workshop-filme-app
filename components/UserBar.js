@@ -116,7 +116,7 @@ function MyProfileModal({ onClose }) {
           name: data.profile.name || '',
           phone: data.profile.phone || '',
           address: {
-            street1: data.profile.address?.street1 || '',
+            address1: data.profile.address?.address1 || '',
             zipcode: data.profile.address?.zipcode || '',
             city: data.profile.address?.city || '',
           },
@@ -190,8 +190,8 @@ function MyProfileModal({ onClose }) {
               <label className="form-label">Adresse</label>
               <input
                 className="form-input"
-                value={form.address.street1}
-                onChange={(e) => setAddress('street1', e.target.value)}
+                value={form.address.address1}
+                onChange={(e) => setAddress('address1', e.target.value)}
                 placeholder="Numéro et rue"
                 style={{ marginBottom: 8 }}
               />

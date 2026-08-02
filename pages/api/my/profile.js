@@ -36,19 +36,29 @@ export default requireClientAuth(async function handler(req, res) {
     const { name, phone, address } = req.body || {};
     const fields = {};
     if (name !== undefined) fields.name = (name || '').trim();
-    // Le téléphone est une custom property côté Booqable (clé "telephone"),
-    // pas un attribut natif — cf. lib/booqable.js.
-    const properties = {};
-    if (phone !== undefined) properties.telephone = (phone || '').trim();
+    // Les custom properties (téléphone, adresse) ne s'écrivent PAS via un
+    // objet "properties" imbriqué (lecture seule sur customers — confirmé par
+    // l'erreur "data.attributes.properties cannot be written"), mais via
+    // "properties_attributes" : un TABLEAU de hashes { identifier, value }
+    // (ou champs propres au type "address" : address1/address2/city/country/
+    // zipcode), qui crée ou met à jour la valeur de la default property
+    // correspondante pour ce client (cf. developers.booqable.com, section
+    // "Manage properties through their owner"). Clé du téléphone chez Filme :
+    // "telephone" (custom property déjà configurée côté Booqable).
+    const propertiesAttributes = [];
+    if (phone !== undefined) {
+      propertiesAttributes.push({ identifier: 'telephone', value: (phone || '').trim() });
+    }
     if (address !== undefined) {
-      properties.main_address = {
-        street1: (address?.street1 || '').trim(),
+      propertiesAttributes.push({
+        identifier: 'main_address',
+        address1: (address?.address1 || '').trim(),
         city: (address?.city || '').trim(),
         zipcode: (address?.zipcode || '').trim(),
         country: (address?.country || 'FR').trim(),
-      };
+      });
     }
-    if (Object.keys(properties).length) fields.properties = properties;
+    if (propertiesAttributes.length) fields.properties_attributes = propertiesAttributes;
     try {
       const profile = await updateCustomer(customer.id, fields);
       return res.status(200).json({ profile });
