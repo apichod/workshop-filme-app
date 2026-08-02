@@ -5,16 +5,19 @@ export default requireAuth(async function handler(req, res) {
   const { id } = req.query;
 
   if (req.method === 'PATCH') {
-    const { name, email, bio, specialties, photoUrl, archived } = req.body || {};
+    const { name, email, phone, bio, bioLong, specialties, photoUrl, availability, archived } = req.body || {};
     if (name !== undefined && !name.trim()) return res.status(400).json({ error: 'Le nom est requis' });
     if (email !== undefined && !email.trim()) return res.status(400).json({ error: "L'email est requis" });
     try {
       const formateur = await updateFormateur(id, {
         name: name !== undefined ? name.trim() : undefined,
         email: email !== undefined ? email.trim() : undefined,
+        phone: phone !== undefined ? phone.trim() : undefined,
         bio: bio !== undefined ? bio.trim() : undefined,
+        bioLong: bioLong !== undefined ? bioLong.trim() : undefined,
         specialties: specialties !== undefined ? specialties.trim() : undefined,
         photoUrl: photoUrl !== undefined ? photoUrl.trim() : undefined,
+        availability,
         archived: archived !== undefined ? !!archived : undefined,
       });
       if (!formateur) return res.status(404).json({ error: 'Formateur introuvable' });

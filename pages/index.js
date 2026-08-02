@@ -1075,13 +1075,101 @@ function ActiveTopicsPreferences({ topics, onDeleted }) {
 }
 
 // ─── Onglet Préférences — gestion des formateurs (CRUD) ──────────────────────
+const WEEKDAYS = [
+  { key: 'lundi', label: 'Lundi' },
+  { key: 'mardi', label: 'Mardi' },
+  { key: 'mercredi', label: 'Mercredi' },
+  { key: 'jeudi', label: 'Jeudi' },
+  { key: 'vendredi', label: 'Vendredi' },
+  { key: 'samedi', label: 'Samedi' },
+  { key: 'dimanche', label: 'Dimanche' },
+];
+
+// Complète les jours manquants par un tableau vide — pour toujours itérer sur
+// les 7 jours quel que soit l'état (partiel ou vide) stocké en base.
+function normalizeAvailability(a) {
+  const base = {};
+  WEEKDAYS.forEach((d) => { base[d.key] = Array.isArray(a?.[d.key]) ? a[d.key] : []; });
+  return base;
+}
+
+// Éditeur "agenda" des disponibilités — un ou plusieurs créneaux horaires
+// précis (ex : 09:00–12:00) par jour de la semaine, récurrents chaque semaine.
+function AvailabilityEditor({ value, onChange }) {
+  const [drafts, setDrafts] = useState(() => WEEKDAYS.reduce((acc, d) => ({ ...acc, [d.key]: { start: '', end: '' } }), {}));
+
+  function setDraft(day, field, v) {
+    setDrafts((d) => ({ ...d, [day]: { ...d[day], [field]: v } }));
+  }
+
+  function addSlot(day) {
+    const { start, end } = drafts[day];
+    if (!start || !end || start >= end) return;
+    const dayList = value[day] || [];
+    onChange({ ...value, [day]: [...dayList, { start, end }].sort((a, b) => a.start.localeCompare(b.start)) });
+    setDrafts((d) => ({ ...d, [day]: { start: '', end: '' } }));
+  }
+
+  function removeSlot(day, idx) {
+    const dayList = (value[day] || []).slice();
+    dayList.splice(idx, 1);
+    onChange({ ...value, [day]: dayList });
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      {WEEKDAYS.map((d) => (
+        <div key={d.key} style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          <div style={{ width: 84, fontSize: 13, fontWeight: 600, flexShrink: 0 }}>{d.label}</div>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            {(value[d.key] || []).map((slot, i) => (
+              <span key={i} className="badge badge-blue" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                {slot.start}–{slot.end}
+                <button
+                  type="button"
+                  onClick={() => removeSlot(d.key, i)}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', padding: 0, fontSize: 11, lineHeight: 1 }}
+                  title="Retirer ce créneau"
+                >
+                  ✕
+                </button>
+              </span>
+            ))}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <input
+              type="time"
+              className="form-input"
+              style={{ width: 108, padding: '6px 8px' }}
+              value={drafts[d.key].start}
+              onChange={(e) => setDraft(d.key, 'start', e.target.value)}
+            />
+            <span style={{ color: 'var(--text-muted)' }}>–</span>
+            <input
+              type="time"
+              className="form-input"
+              style={{ width: 108, padding: '6px 8px' }}
+              value={drafts[d.key].end}
+              onChange={(e) => setDraft(d.key, 'end', e.target.value)}
+            />
+            <button type="button" className="btn btn-ghost btn-sm" onClick={() => addSlot(d.key)}>+ Ajouter</button>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function emptyFormateurForm(f) {
   return {
     name: f?.name || '',
     email: f?.email || '',
+    phone: f?.phone || '',
     bio: f?.bio || '',
+    bioLong: f?.bioLong || '',
     specialties: f?.specialties || '',
     photoUrl: f?.photoUrl || '',
+    availability: normalizeAvailability(f?.availability),
   };
 }
 
@@ -1151,10 +1239,18 @@ function FormateurForm({ formateur, onCancel, onSaved, topics, onTopicUpdated })
           <label className="form-label">Email de connexion</label>
           <input className="form-input" type="email" value={form.email} onChange={(e) => set('email', e.target.value)} placeholder="jeanne@filme.fr" required />
         </div>
+        <div className="form-group" style={{ flex: 1 }}>
+          <label className="form-label">Téléphone</label>
+          <input className="form-input" type="tel" value={form.phone} onChange={(e) => set('phone', e.target.value)} placeholder="06 12 34 56 78" />
+        </div>
       </div>
       <div className="form-group">
         <label className="form-label">Bio courte</label>
-        <textarea className="form-input" rows={2} value={form.bio} onChange={(e) => set('bio', e.target.value)} placeholder="1-3 phrases de présentation, affichées dans la section formateurs" />
+        <textarea className="form-input" rows={2} value={form.bio} onChange={(e) => set('bio', e.target.value)} placeholder="1-3 phrases de présentation, affichées sur la carte formateur" />
+      </div>
+      <div className="form-group">
+        <label className="form-label">Bio longue</label>
+        <textarea className="form-input" rows={5} value={form.bioLong} onChange={(e) => set('bioLong', e.target.value)} placeholder="Présentation détaillée, affichée dans la popup « En savoir plus »" />
       </div>
       <div style={{ display: 'flex', gap: 12 }}>
         <div className="form-group" style={{ flex: 1 }}>
@@ -1164,6 +1260,16 @@ function FormateurForm({ formateur, onCancel, onSaved, topics, onTopicUpdated })
         <div className="form-group" style={{ flex: 1 }}>
           <label className="form-label">Photo (URL)</label>
           <input className="form-input" value={form.photoUrl} onChange={(e) => set('photoUrl', e.target.value)} placeholder="https://…" />
+        </div>
+      </div>
+
+      <div className="form-group">
+        <label className="form-label">Disponibilités</label>
+        <div style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 12 }}>
+          <AvailabilityEditor value={form.availability} onChange={(v) => set('availability', v)} />
+        </div>
+        <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
+          Créneaux horaires récurrents chaque semaine — usage interne pour la planification, non affichés publiquement.
         </div>
       </div>
 
@@ -1272,9 +1378,12 @@ function FormateurJsonModal({ formateur, onClose, onImported }) {
         body: JSON.stringify({
           name: parsed.name,
           email: parsed.email,
+          phone: parsed.phone ?? '',
           bio: parsed.bio ?? '',
+          bioLong: parsed.bioLong ?? '',
           specialties: parsed.specialties ?? '',
           photoUrl: parsed.photoUrl ?? '',
+          availability: normalizeAvailability(parsed.availability),
         }),
       });
       const data = await res.json();
@@ -1383,9 +1492,9 @@ function FormateurDetailModal({ formateur, isAdmin, onClose, onSaved }) {
               {specialtyTags.map((s) => <span className={`badge ${categoryStyle(s).badgeClass}`} key={s}>{s}</span>)}
             </div>
           )}
-          {formateur.bio && (
+          {(formateur.bioLong || formateur.bio) && (
             <p style={{ whiteSpace: 'pre-wrap', fontSize: 14, color: 'var(--text)', lineHeight: 1.7, marginTop: 12 }}>
-              {formateur.bio}
+              {formateur.bioLong || formateur.bio}
             </p>
           )}
         </div>
