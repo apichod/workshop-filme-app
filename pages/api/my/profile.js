@@ -36,17 +36,19 @@ export default requireClientAuth(async function handler(req, res) {
     const { name, phone, address } = req.body || {};
     const fields = {};
     if (name !== undefined) fields.name = (name || '').trim();
-    if (phone !== undefined) fields.phone = (phone || '').trim();
+    // Le téléphone est une custom property côté Booqable (clé "telephone"),
+    // pas un attribut natif — cf. lib/booqable.js.
+    const properties = {};
+    if (phone !== undefined) properties.telephone = (phone || '').trim();
     if (address !== undefined) {
-      fields.properties = {
-        main_address: {
-          street1: (address?.street1 || '').trim(),
-          city: (address?.city || '').trim(),
-          zipcode: (address?.zipcode || '').trim(),
-          country: (address?.country || 'FR').trim(),
-        },
+      properties.main_address = {
+        street1: (address?.street1 || '').trim(),
+        city: (address?.city || '').trim(),
+        zipcode: (address?.zipcode || '').trim(),
+        country: (address?.country || 'FR').trim(),
       };
     }
+    if (Object.keys(properties).length) fields.properties = properties;
     try {
       const profile = await updateCustomer(customer.id, fields);
       return res.status(200).json({ profile });
