@@ -346,12 +346,13 @@ function TopicDetailModal({ topic, onClose, onRegister }) {
 }
 
 // ─── Carte formation — mode normal + popups édition/détail (admin) ───────────
-function TopicCard({ topic, index, isAdmin, onOpenRegister, onSaved, onDeleted }) {
+function TopicCard({ topic, index, isAdmin, onOpenRegister, onSaved, onDeleted, onTopicsReplaced }) {
   const [archiving, setArchiving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState('');
   const [showDetail, setShowDetail] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
+  const [showJson, setShowJson] = useState(false);
 
   async function toggleArchived() {
     setArchiving(true);
@@ -416,6 +417,7 @@ function TopicCard({ topic, index, isAdmin, onOpenRegister, onSaved, onDeleted }
         {isAdmin && (
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             <button type="button" className="btn btn-ghost btn-sm" onClick={() => setShowEdit(true)}>✏️ Éditer</button>
+            <button type="button" className="btn btn-ghost btn-sm" onClick={() => setShowJson(true)}>{'{ } JSON'}</button>
             <button type="button" className="btn btn-ghost btn-sm" onClick={toggleArchived} disabled={archiving}>
               {archiving ? '…' : topic.archived ? 'Désarchiver' : 'Archiver'}
             </button>
@@ -432,6 +434,134 @@ function TopicCard({ topic, index, isAdmin, onOpenRegister, onSaved, onDeleted }
       {showEdit && (
         <TopicFormModal mode="edit" topic={topic} onClose={() => setShowEdit(false)} onSaved={onSaved} />
       )}
+      {showJson && (
+        <TopicJsonModal topic={topic} onClose={() => setShowJson(false)} onImported={onTopicsReplaced} />
+      )}
+    </div>
+  );
+}
+
+// ─── Popup admin export / import JSON d'UNE SEULE formation ─────────────────
+// Même mécanisme que TopicsJsonModal (réutilise l'API d'import en masse avec
+// un tableau d'un seul élément), mais scopé à une formation : pratique pour
+// sauvegarder/dupliquer/restaurer une formation précise sans toucher aux autres.
+function TopicJsonModal({ topic, onClose, onImported }) {
+  const [tab, setTab] = useState('export');
+  const [importText, setImportText] = useState(JSON.stringify(topic, null, 2));
+  const [log, setLog] = useState([]);
+  const [importing, setImporting] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const exportText = JSON.stringify(topic, null, 2);
+
+  async function copyExport() {
+    try {
+      await navigator.clipboard.writeText(exportText);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      // Le presse-papiers peut être indisponible (contexte non sécurisé) — l'admin peut copier manuellement.
+    }
+  }
+
+  async function runImport() {
+    setLog([]);
+    let parsed;
+    try {
+      parsed = JSON.parse(importText);
+      if (Array.isArray(parsed)) parsed = parsed[0];
+      if (!parsed || typeof parsed !== 'object') throw new Error('Le JSON doit être un objet : { "title": "…", … }');
+    } catch (err) {
+      setLog([`✗ JSON invalide — ${err.message}`]);
+      return;
+    }
+    // Si l'id a été effacé par erreur, on le remet pour être sûr de mettre à
+    // jour CETTE formation plutôt que d'en créer une nouvelle par erreur.
+    if (!parsed.id) parsed.id = topic.id;
+
+    setImporting(true);
+    try {
+      const res = await fetch('/api/admin/topics/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ topics: [parsed] }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Erreur serveur');
+
+      const [r] = data.results;
+      setLog([r.ok ? `✓ ${r.title || r.id} — ${r.action === 'created' ? 'créée' : 'mise à jour'} (id: ${r.id})` : `✗ ${r.title || r.id} — ${r.error}`]);
+
+      if (r.ok) {
+        const refreshed = await fetch('/api/admin/topics');
+        const refreshedData = await refreshed.json();
+        if (refreshed.ok) onImported(refreshedData.topics);
+      }
+    } catch (err) {
+      setLog((l) => [...l, `✗ ${err.message}`]);
+    } finally {
+      setImporting(false);
+    }
+  }
+
+  return (
+    <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="modal" style={{ maxWidth: 680, maxHeight: '85vh', overflowY: 'auto' }}>
+        <button className="modal-close" onClick={onClose}>✕</button>
+        <h2>Export / Import — {topic.title}</h2>
+
+        <div style={{ display: 'flex', gap: 8, marginTop: 16, marginBottom: 12 }}>
+          <button type="button" className={`btn btn-sm ${tab === 'export' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setTab('export')}>Export</button>
+          <button type="button" className={`btn btn-sm ${tab === 'import' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setTab('import')}>Import</button>
+        </div>
+
+        {tab === 'export' ? (
+          <>
+            <p style={{ color: 'var(--text-muted)', fontSize: 13, marginBottom: 8 }}>
+              Copiez ce JSON pour sauvegarder ou dupliquer cette formation ailleurs.
+            </p>
+            <textarea
+              className="form-input"
+              readOnly
+              rows={16}
+              value={exportText}
+              onFocus={(e) => e.target.select()}
+              style={{ fontFamily: 'monospace', fontSize: 12 }}
+            />
+            <div className="modal-actions">
+              <button type="button" className="btn btn-ghost" onClick={onClose}>Fermer</button>
+              <button type="button" className="btn btn-primary" onClick={copyExport}>{copied ? 'Copié ✓' : 'Copier'}</button>
+            </div>
+          </>
+        ) : (
+          <>
+            <p style={{ color: 'var(--text-muted)', fontSize: 13, marginBottom: 8 }}>
+              Collez le JSON de cette formation (modifié si besoin) pour la mettre à jour. Gardez le champ
+              « id » tel quel — si vous le changez, une nouvelle formation sera créée au lieu de mettre à jour celle-ci.
+            </p>
+            <textarea
+              className="form-input"
+              rows={16}
+              value={importText}
+              onChange={(e) => setImportText(e.target.value)}
+              style={{ fontFamily: 'monospace', fontSize: 12 }}
+            />
+            {log.length > 0 && (
+              <div style={{ marginTop: 12, background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, padding: 12, fontFamily: 'monospace', fontSize: 12 }}>
+                {log.map((line, i) => (
+                  <div key={i} style={{ color: line.startsWith('✗') ? 'var(--red)' : 'var(--green)' }}>{line}</div>
+                ))}
+              </div>
+            )}
+            <div className="modal-actions">
+              <button type="button" className="btn btn-ghost" onClick={onClose}>Fermer</button>
+              <button type="button" className="btn btn-primary" onClick={runImport} disabled={importing || !importText.trim()}>
+                {importing ? 'Import…' : 'Importer'}
+              </button>
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 }
@@ -1342,7 +1472,7 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
           ) : (
             <div className="topics-grid">
               {filteredTopics.map((t) => (
-                <TopicCard key={t.id} topic={t} index={topics.indexOf(t)} isAdmin={isAdmin} onOpenRegister={(id) => openModal(id, null)} onSaved={updateTopicInList} onDeleted={removeTopicFromList} />
+                <TopicCard key={t.id} topic={t} index={topics.indexOf(t)} isAdmin={isAdmin} onOpenRegister={(id) => openModal(id, null)} onSaved={updateTopicInList} onDeleted={removeTopicFromList} onTopicsReplaced={setTopics} />
               ))}
               {isAdmin && <NewTopicCard onCreated={addTopicToList} />}
             </div>
