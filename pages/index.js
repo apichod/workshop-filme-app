@@ -2088,6 +2088,89 @@ function SessionTypeFilter({ label = 'Type', options, selected, onToggle, onRese
   );
 }
 
+// Vue calendrier alternative pour "Événements à venir" : agenda mensuel avec
+// les sessions placées sur leur date, cliquables (comme le bouton
+// S'inscrire) — sauf si la session est complète.
+function SessionsCalendar({ sessions, onSelect }) {
+  const [monthDate, setMonthDate] = useState(() => { const d = new Date(); d.setDate(1); d.setHours(0, 0, 0, 0); return d; });
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const cells = buildMonthCells(monthDate);
+  const byDate = new Map();
+  sessions.forEach((s) => {
+    const list = byDate.get(s.dateIso) || [];
+    list.push(s);
+    byDate.set(s.dateIso, list);
+  });
+
+  return (
+    <div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+        <button type="button" className="btn btn-ghost btn-sm" onClick={() => setMonthDate((m) => new Date(m.getFullYear(), m.getMonth() - 1, 1))}>‹</button>
+        <div style={{ fontSize: 15, fontWeight: 600 }}>{CAL_MONTH_LABELS[monthDate.getMonth()]} {monthDate.getFullYear()}</div>
+        <button type="button" className="btn btn-ghost btn-sm" onClick={() => setMonthDate((m) => new Date(m.getFullYear(), m.getMonth() + 1, 1))}>›</button>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 6, fontSize: 12, color: 'var(--text-muted)', textAlign: 'center', marginBottom: 6 }}>
+        {CAL_WEEKDAY_LABELS.map((l) => <div key={l}>{l}</div>)}
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 6 }}>
+        {cells.map((d, i) => {
+          if (!d) return <div key={`empty-${i}`} />;
+          const iso = toIsoLocal(d);
+          const isToday = d.getTime() === today.getTime();
+          const isPast = d < today;
+          const daySessions = byDate.get(iso) || [];
+          const visible = daySessions.slice(0, 2);
+          const extra = daySessions.length - visible.length;
+          return (
+            <div
+              key={iso}
+              style={{
+                minHeight: 92,
+                border: isToday ? '1px solid var(--red)' : '1px solid var(--border)',
+                borderRadius: 6,
+                padding: 6,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 4,
+                opacity: isPast && daySessions.length === 0 ? 0.5 : 1,
+              }}
+            >
+              <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{d.getDate()}</div>
+              {visible.map((s) => {
+                const isFull = s.count >= s.capacity;
+                return (
+                  <button
+                    key={s.id}
+                    type="button"
+                    disabled={isFull}
+                    onClick={() => onSelect(s)}
+                    title={`${s.topic?.title || ''}${isFull ? ' — Complet' : ''}`}
+                    style={{
+                      textAlign: 'left',
+                      border: 'none',
+                      borderRadius: 4,
+                      padding: '3px 5px',
+                      fontSize: 10.5,
+                      lineHeight: 1.25,
+                      cursor: isFull ? 'default' : 'pointer',
+                      background: isFull ? 'var(--bg)' : s.validated ? 'rgba(74,160,110,0.18)' : 'rgba(90,120,220,0.16)',
+                      color: isFull ? 'var(--text-muted)' : 'var(--text)',
+                    }}
+                  >
+                    {s.topic?.title || 'Session'}
+                  </button>
+                );
+              })}
+              {extra > 0 && <div style={{ fontSize: 10.5, color: 'var(--text-muted)' }}>+{extra} autre{extra > 1 ? 's' : ''}</div>}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export default function Home({ initialSessions, initialTopics, initialContent, initialClosedDates, initialFormateurs, isAdmin, session }) {
   const [sessions, setSessions] = useState(initialSessions);
   const [topics, setTopics] = useState(initialTopics);
@@ -2110,6 +2193,7 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
   const [showPreferences, setShowPreferences] = useState(false);
   const [closedDates, setClosedDates] = useState(initialClosedDates || []);
   const [sessionSort, setSessionSort] = useState('rate'); // 'rate' (défaut) ou 'date'
+  const [sessionsView, setSessionsView] = useState('liste'); // 'liste' | 'calendrier'
   const [sessionTypeFilter, setSessionTypeFilter] = useState([]); // types cochés dans "Filtrer par : Type" ([] = tous)
   const [topicTypeFilter, setTopicTypeFilter] = useState([]); // idem pour "Formations disponibles"
   const [topicStatusFilter, setTopicStatusFilter] = useState([]); // filtre "Statut : Programmé / Date flexible"
@@ -2418,18 +2502,50 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
                   />
                 </div>
               )}
-              <div className="sort-row" style={{ marginLeft: 'auto' }}>
-                <span className="sort-label">Trier par :</span>
-                <div className="sort-select-wrap">
-                  <select className="sort-select" value={sessionSort} onChange={(e) => setSessionSort(e.target.value)}>
-                    <option value="rate">Taux de remplissage</option>
-                    <option value="date">Date</option>
-                  </select>
-                  <Icon name="chevronDown" size={14} />
+              <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 16 }}>
+                <div className="sort-row">
+                  <span className="sort-label">Trier par :</span>
+                  <div className="sort-select-wrap">
+                    <select className="sort-select" value={sessionSort} onChange={(e) => setSessionSort(e.target.value)}>
+                      <option value="rate">Taux de remplissage</option>
+                      <option value="date">Date</option>
+                    </select>
+                    <Icon name="chevronDown" size={14} />
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: 2, border: '1px solid var(--border)', borderRadius: 6, padding: 2 }}>
+                  <button
+                    type="button"
+                    onClick={() => setSessionsView('liste')}
+                    title="Vue liste"
+                    style={{ display: 'flex', alignItems: 'center', border: 'none', borderRadius: 4, padding: '5px 7px', cursor: 'pointer', background: sessionsView === 'liste' ? '#e8ab5c' : 'transparent', color: sessionsView === 'liste' ? '#fff' : 'var(--text-muted)' }}
+                  >
+                    <Icon name="list" size={14} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSessionsView('calendrier')}
+                    title="Vue calendrier"
+                    style={{ display: 'flex', alignItems: 'center', border: 'none', borderRadius: 4, padding: '5px 7px', cursor: 'pointer', background: sessionsView === 'calendrier' ? '#e8ab5c' : 'transparent', color: sessionsView === 'calendrier' ? '#fff' : 'var(--text-muted)' }}
+                  >
+                    <Icon name="calendar" size={14} />
+                  </button>
                 </div>
               </div>
             </div>
           )}
+          {sessionsView === 'calendrier' && sessions.length > 0 ? (
+            <div className="card" style={{ padding: 16 }}>
+              {visibleSessions.length === 0 ? (
+                <div className="empty">
+                  <div className="empty-icon">📅</div>
+                  Aucune session ne correspond à ce filtre.
+                </div>
+              ) : (
+                <SessionsCalendar sessions={visibleSessions} onSelect={(s) => openModal(s.topicId, s.dateIso)} />
+              )}
+            </div>
+          ) : (
           <div className="card">
             {sessions.length === 0 ? (
               <div className="empty">
@@ -2487,6 +2603,7 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
               })
             )}
           </div>
+          )}
         </section>
 
         <section className="section">
