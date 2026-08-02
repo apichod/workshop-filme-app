@@ -33,7 +33,11 @@ export default function UserBar({ session }) {
           {session ? (
             <>
               <div className="user-menu-label">{session.name || session.email}</div>
-              <a href="/mes-inscriptions" className="user-menu-item">Mes formations</a>
+              {session.isFormateur ? (
+                <a href="/formateur" className="user-menu-item">Mes sessions</a>
+              ) : (
+                <a href="/mes-inscriptions" className="user-menu-item">Mes formations</a>
+              )}
               <a href="/api/logout" className="user-menu-item">Déconnexion</a>
             </>
           ) : (

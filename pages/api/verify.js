@@ -8,6 +8,13 @@ export default function handler(req, res) {
     return res.redirect(302, '/login?error=lien-invalide');
   }
 
-  setSessionCookie(res, { email: payload.email, name: payload.name || '', isAdmin: !!payload.isAdmin });
-  return res.redirect(302, payload.isAdmin ? '/' : '/mes-inscriptions');
+  setSessionCookie(res, {
+    email: payload.email,
+    name: payload.name || '',
+    isAdmin: !!payload.isAdmin,
+    isFormateur: !!payload.isFormateur,
+    formateurId: payload.formateurId || null,
+  });
+  const destination = payload.isAdmin ? '/' : payload.isFormateur ? '/formateur' : '/mes-inscriptions';
+  return res.redirect(302, destination);
 }

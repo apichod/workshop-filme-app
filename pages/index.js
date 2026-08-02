@@ -4,6 +4,7 @@ import { getOpenSessions } from '../lib/sessions';
 import { getVisibleTopics, getAllTopics, CAPACITY, VALIDATION_THRESHOLD, PRICE_LABEL, TOPIC_CATEGORIES, TOPIC_TYPES, SCHEDULE_OPTIONS, nextWeekdayDates, topicWeekday, scheduleOption, yearSaturdays, formatSaturday, formatPrice, parsePriceValue } from '../lib/topics';
 import { getSiteContent, CONTENT_DEFAULTS } from '../lib/content';
 import { getClosedDates } from '../lib/closedDates';
+import { getAllFormateurs } from '../lib/formateurs';
 import { getSession } from '../lib/auth';
 import AdminBar from '../components/AdminBar';
 import UserBar from '../components/UserBar';
@@ -184,10 +185,11 @@ function emptyTopicForm(topic) {
     minParticipants: Number.isFinite(topic?.minParticipants) ? String(topic.minParticipants) : '',
     scheduleMode: topic?.scheduleMode || 'saturday',
     fixedDate: topic?.fixedDate || '',
+    formateurId: topic?.formateurId || '',
   };
 }
 
-function TopicFormModal({ mode, topic, onClose, onSaved, onTopicsReplaced }) {
+function TopicFormModal({ mode, topic, onClose, onSaved, onTopicsReplaced, formateurs }) {
   const [form, setForm] = useState(emptyTopicForm(topic));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -200,6 +202,7 @@ function TopicFormModal({ mode, topic, onClose, onSaved, onTopicsReplaced }) {
   async function submit(e) {
     e.preventDefault();
     if (!form.title.trim()) { setError('Le titre est requis.'); return; }
+    if (!form.formateurId) { setError('Le formateur est requis.'); return; }
     setLoading(true);
     setError('');
     try {
@@ -255,6 +258,19 @@ function TopicFormModal({ mode, topic, onClose, onSaved, onTopicsReplaced }) {
                 {TOPIC_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">Formateur</label>
+            <select className="form-input" value={form.formateurId} onChange={(e) => set('formateurId', e.target.value)} required>
+              <option value="">— Choisir un formateur —</option>
+              {formateurs.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
+            </select>
+            {formateurs.length === 0 && (
+              <div style={{ fontSize: 12, color: 'var(--red)', marginTop: 4 }}>
+                Aucun formateur pour l'instant — ajoutez-en un dans Préférences → Formateurs avant de créer une formation.
+              </div>
+            )}
           </div>
 
           <div className="form-group">
@@ -452,7 +468,7 @@ function TopicDetailModal({ topic, onClose, onRegister }) {
 }
 
 // ─── Carte formation — mode normal + popups édition/détail (admin) ───────────
-function TopicCard({ topic, index, isAdmin, onOpenRegister, onSaved, onDeleted, onTopicsReplaced }) {
+function TopicCard({ topic, index, isAdmin, onOpenRegister, onSaved, onDeleted, onTopicsReplaced, formateurs }) {
   const [archiving, setArchiving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState('');
@@ -536,7 +552,7 @@ function TopicCard({ topic, index, isAdmin, onOpenRegister, onSaved, onDeleted, 
 
       {showDetail && <TopicDetailModal topic={topic} onClose={() => setShowDetail(false)} onRegister={onOpenRegister} />}
       {showEdit && (
-        <TopicFormModal mode="edit" topic={topic} onClose={() => setShowEdit(false)} onSaved={onSaved} onTopicsReplaced={onTopicsReplaced} />
+        <TopicFormModal mode="edit" topic={topic} onClose={() => setShowEdit(false)} onSaved={onSaved} onTopicsReplaced={onTopicsReplaced} formateurs={formateurs} />
       )}
     </div>
   );
@@ -668,7 +684,7 @@ function TopicJsonModal({ topic, onClose, onImported }) {
 }
 
 // ─── Carte "+ Nouvelle formation" (admin uniquement) ─────────────────────────
-function NewTopicCard({ onCreated }) {
+function NewTopicCard({ onCreated, formateurs }) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -682,7 +698,7 @@ function NewTopicCard({ onCreated }) {
         <span style={{ fontWeight: 700, color: 'var(--accent)' }}>+ Nouvelle formation</span>
       </button>
       {open && (
-        <TopicFormModal mode="create" topic={null} onClose={() => setOpen(false)} onSaved={onCreated} />
+        <TopicFormModal mode="create" topic={null} onClose={() => setOpen(false)} onSaved={onCreated} formateurs={formateurs} />
       )}
     </>
   );
@@ -1058,7 +1074,170 @@ function ActiveTopicsPreferences({ topics, onDeleted }) {
   );
 }
 
-function PreferencesModal({ closedDates, onToggle, onSessionsChanged, topics, onTopicDeleted, onClose }) {
+// ─── Onglet Préférences — gestion des formateurs (CRUD) ──────────────────────
+function emptyFormateurForm(f) {
+  return {
+    name: f?.name || '',
+    email: f?.email || '',
+    bio: f?.bio || '',
+    specialties: f?.specialties || '',
+    photoUrl: f?.photoUrl || '',
+  };
+}
+
+function FormateurForm({ formateur, onCancel, onSaved }) {
+  const [form, setForm] = useState(emptyFormateurForm(formateur));
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  function set(field, value) {
+    setForm((f) => ({ ...f, [field]: value }));
+  }
+
+  async function submit(e) {
+    e.preventDefault();
+    if (!form.name.trim()) { setError('Le nom est requis.'); return; }
+    if (!form.email.trim()) { setError("L'email est requis."); return; }
+    setLoading(true);
+    setError('');
+    try {
+      const url = formateur ? `/api/admin/formateurs/${formateur.id}` : '/api/admin/formateurs';
+      const method = formateur ? 'PATCH' : 'POST';
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Erreur');
+      onSaved(data.formateur, !formateur);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <form onSubmit={submit} style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 14, marginBottom: 12 }}>
+      {error && <div className="form-error">{error}</div>}
+      <div style={{ display: 'flex', gap: 12 }}>
+        <div className="form-group" style={{ flex: 1 }}>
+          <label className="form-label">Nom</label>
+          <input className="form-input" value={form.name} onChange={(e) => set('name', e.target.value)} placeholder="Ex : Jeanne Dupont" required />
+        </div>
+        <div className="form-group" style={{ flex: 1 }}>
+          <label className="form-label">Email de connexion</label>
+          <input className="form-input" type="email" value={form.email} onChange={(e) => set('email', e.target.value)} placeholder="jeanne@filme.fr" required />
+        </div>
+      </div>
+      <div className="form-group">
+        <label className="form-label">Bio courte</label>
+        <textarea className="form-input" rows={2} value={form.bio} onChange={(e) => set('bio', e.target.value)} placeholder="1-3 phrases de présentation, affichées dans la section formateurs" />
+      </div>
+      <div style={{ display: 'flex', gap: 12 }}>
+        <div className="form-group" style={{ flex: 1 }}>
+          <label className="form-label">Spécialité(s)</label>
+          <input className="form-input" value={form.specialties} onChange={(e) => set('specialties', e.target.value)} placeholder="Ex : Prise de vue, Étalonnage" />
+        </div>
+        <div className="form-group" style={{ flex: 1 }}>
+          <label className="form-label">Photo (URL)</label>
+          <input className="form-input" value={form.photoUrl} onChange={(e) => set('photoUrl', e.target.value)} placeholder="https://…" />
+        </div>
+      </div>
+      <div className="modal-actions" style={{ marginTop: 8 }}>
+        <button type="button" className="btn btn-ghost" onClick={onCancel}>Annuler</button>
+        <button type="submit" className="btn btn-primary" disabled={loading}>
+          {loading ? 'Enregistrement…' : formateur ? 'Enregistrer' : 'Ajouter le formateur'}
+        </button>
+      </div>
+    </form>
+  );
+}
+
+function FormateursPreferences({ formateurs, onCreated, onUpdated, onDeleted }) {
+  const [showAdd, setShowAdd] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
+  const [error, setError] = useState('');
+
+  async function remove(f) {
+    if (!window.confirm(`Supprimer définitivement « ${f.name} » ? Cette action est irréversible.`)) return;
+    setDeletingId(f.id);
+    setError('');
+    try {
+      const res = await fetch(`/api/admin/formateurs/${f.id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Erreur');
+      onDeleted(f.id);
+    } catch (err) {
+      setError(err.message || 'Erreur');
+    } finally {
+      setDeletingId(null);
+    }
+  }
+
+  return (
+    <>
+      <p style={{ color: 'var(--text-muted)', fontSize: 13, marginTop: 8, marginBottom: 16 }}>
+        Les formateurs assignés aux formations reçoivent un lien de connexion dédié (comme l'admin) pour voir
+        uniquement les sessions qui leur sont assignées. Ils sont aussi listés en bas de page.
+      </p>
+
+      {error && <div className="form-error">{error}</div>}
+
+      {!showAdd ? (
+        <button type="button" className="btn btn-ghost btn-sm" onClick={() => setShowAdd(true)} style={{ marginBottom: 16 }}>
+          + Ajouter un formateur
+        </button>
+      ) : (
+        <FormateurForm
+          onCancel={() => setShowAdd(false)}
+          onSaved={(f) => { onCreated(f); setShowAdd(false); }}
+        />
+      )}
+
+      {formateurs.length === 0 ? (
+        <div className="empty">Aucun formateur pour le moment.</div>
+      ) : (
+        formateurs.map((f) =>
+          editingId === f.id ? (
+            <FormateurForm
+              key={f.id}
+              formateur={f}
+              onCancel={() => setEditingId(null)}
+              onSaved={(updated) => { onUpdated(updated); setEditingId(null); }}
+            />
+          ) : (
+            <div
+              key={f.id}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, fontSize: 13, padding: '8px 0', borderBottom: '1px solid var(--border)' }}
+            >
+              <div>
+                <div style={{ fontWeight: 700 }}>{f.name}</div>
+                <div style={{ color: 'var(--text-muted)' }}>{f.email}</div>
+              </div>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <button type="button" className="btn btn-ghost btn-sm" onClick={() => setEditingId(f.id)}>✏️ Éditer</button>
+                <button
+                  type="button"
+                  className="btn btn-ghost btn-sm"
+                  disabled={deletingId === f.id}
+                  onClick={() => remove(f)}
+                  style={{ color: '#c0392b' }}
+                >
+                  {deletingId === f.id ? '…' : 'Supprimer'}
+                </button>
+              </div>
+            </div>
+          )
+        )
+      )}
+    </>
+  );
+}
+
+function PreferencesModal({ closedDates, onToggle, onSessionsChanged, topics, onTopicDeleted, formateurs, onFormateurCreated, onFormateurUpdated, onFormateurDeleted, onClose }) {
   const [tab, setTab] = useState('samedis');
 
   return (
@@ -1071,11 +1250,20 @@ function PreferencesModal({ closedDates, onToggle, onSessionsChanged, topics, on
           <button type="button" className={`btn btn-sm ${tab === 'samedis' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setTab('samedis')}>Samedis proposés</button>
           <button type="button" className={`btn btn-sm ${tab === 'inscriptions' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setTab('inscriptions')}>Inscriptions</button>
           <button type="button" className={`btn btn-sm ${tab === 'formations' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setTab('formations')}>Formations actives</button>
+          <button type="button" className={`btn btn-sm ${tab === 'formateurs' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setTab('formateurs')}>Formateurs</button>
         </div>
 
         {tab === 'samedis' && <SaturdaysPreferences closedDates={closedDates} onToggle={onToggle} />}
         {tab === 'inscriptions' && <RegistrationsPreferences onChanged={onSessionsChanged} />}
         {tab === 'formations' && <ActiveTopicsPreferences topics={topics} onDeleted={onTopicDeleted} />}
+        {tab === 'formateurs' && (
+          <FormateursPreferences
+            formateurs={formateurs}
+            onCreated={onFormateurCreated}
+            onUpdated={onFormateurUpdated}
+            onDeleted={onFormateurDeleted}
+          />
+        )}
 
         <div className="modal-actions">
           <button type="button" className="btn btn-primary" onClick={onClose}>Fermer</button>
@@ -1177,10 +1365,11 @@ function SessionTypeFilter({ label = 'Type', options, selected, onToggle, onRese
   );
 }
 
-export default function Home({ initialSessions, initialTopics, initialContent, initialClosedDates, isAdmin, session }) {
+export default function Home({ initialSessions, initialTopics, initialContent, initialClosedDates, initialFormateurs, isAdmin, session }) {
   const [sessions, setSessions] = useState(initialSessions);
   const [topics, setTopics] = useState(initialTopics);
   const [content, setContent] = useState(initialContent);
+  const [formateurs, setFormateurs] = useState(initialFormateurs || []);
   const [heroSlide, setHeroSlide] = useState(0);
   // Défilement automatique du carrousel Hero (visiteurs uniquement — coupé en
   // mode admin pour ne pas changer de slide pendant une édition en cours).
@@ -1261,6 +1450,16 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
   }
   function removeTopicFromList(id) {
     setTopics((list) => list.filter((t) => t.id !== id));
+  }
+
+  function addFormateurToList(created) {
+    setFormateurs((list) => [...list, created]);
+  }
+  function updateFormateurInList(updated) {
+    setFormateurs((list) => list.map((f) => (f.id === updated.id ? updated : f)));
+  }
+  function removeFormateurFromList(id) {
+    setFormateurs((list) => list.filter((f) => f.id !== id));
   }
 
   async function saveContent(key, value) {
@@ -1656,9 +1855,9 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
           ) : (
             <div className="topics-grid">
               {filteredTopics.map((t) => (
-                <TopicCard key={t.id} topic={t} index={topics.indexOf(t)} isAdmin={isAdmin} onOpenRegister={(id) => openModal(id, null)} onSaved={updateTopicInList} onDeleted={removeTopicFromList} onTopicsReplaced={setTopics} />
+                <TopicCard key={t.id} topic={t} index={topics.indexOf(t)} isAdmin={isAdmin} onOpenRegister={(id) => openModal(id, null)} onSaved={updateTopicInList} onDeleted={removeTopicFromList} onTopicsReplaced={setTopics} formateurs={formateurs} />
               ))}
-              {isAdmin && <NewTopicCard onCreated={addTopicToList} />}
+              {isAdmin && <NewTopicCard onCreated={addTopicToList} formateurs={formateurs} />}
             </div>
           )}
         </section>
@@ -1686,6 +1885,37 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
             </div>
           </div>
         </div>
+
+        {formateurs.length > 0 && (
+          <section className="section">
+            <div className="section-head">
+              <div>
+                <EditableText isAdmin={isAdmin} tag="h2" value={content.formateurs_heading} onSave={(v) => saveContent('formateurs_heading', v)} />
+                <EditableText isAdmin={isAdmin} tag="span" className="hint" value={content.formateurs_hint} onSave={(v) => saveContent('formateurs_hint', v)} />
+              </div>
+            </div>
+            <div className="formateurs-grid">
+              {formateurs.map((f) => (
+                <div className="card formateur-card" key={f.id}>
+                  {f.photoUrl ? (
+                    <img src={f.photoUrl} alt={f.name} className="formateur-photo" />
+                  ) : (
+                    <div className="formateur-photo formateur-photo-placeholder"><Icon name="user" size={26} /></div>
+                  )}
+                  <div className="formateur-name">{f.name}</div>
+                  {f.specialties && (
+                    <div className="formateur-tags">
+                      {f.specialties.split(',').map((s) => s.trim()).filter(Boolean).map((s) => (
+                        <span className="badge badge-blue" key={s}>{s}</span>
+                      ))}
+                    </div>
+                  )}
+                  {f.bio && <p className="formateur-bio">{f.bio}</p>}
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
         <footer className="page-footer">
           <EditableText isAdmin={isAdmin} tag="span" value={content.footer_text} onSave={(v) => saveContent('footer_text', v)} />
@@ -1860,6 +2090,10 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
           onSessionsChanged={refreshSessions}
           topics={topics}
           onTopicDeleted={removeTopicFromList}
+          formateurs={formateurs}
+          onFormateurCreated={addFormateurToList}
+          onFormateurUpdated={updateFormateurInList}
+          onFormateurDeleted={removeFormateurFromList}
           onClose={() => setShowPreferences(false)}
         />
       )}
@@ -1872,11 +2106,12 @@ export async function getServerSideProps(ctx) {
   const isAdmin = !!session?.isAdmin;
 
   try {
-    const [sessions, topics, content, closedDates] = await Promise.all([
+    const [sessions, topics, content, closedDates, formateurs] = await Promise.all([
       getOpenSessions(),
       isAdmin ? getAllTopics() : getVisibleTopics(),
       getSiteContent(),
       getClosedDates(),
+      getAllFormateurs(),
     ]);
     return {
       props: {
@@ -1884,6 +2119,7 @@ export async function getServerSideProps(ctx) {
         initialTopics: topics,
         initialContent: content,
         initialClosedDates: closedDates,
+        initialFormateurs: formateurs,
         isAdmin,
         session: session || null,
       },
@@ -1896,6 +2132,7 @@ export async function getServerSideProps(ctx) {
         initialTopics: [],
         initialContent: CONTENT_DEFAULTS,
         initialClosedDates: [],
+        initialFormateurs: [],
         isAdmin,
         session: session || null,
       },

@@ -24,7 +24,8 @@ export default requireAuth(async function handler(req, res) {
 
   if (req.method !== 'PATCH') return res.status(405).json({ error: 'Méthode non autorisée' });
 
-  const { title, level, desc, fullDescription, program, price, duration, category, type, bonus, maxParticipants, equipment, minParticipants, scheduleMode, fixedDate, archived } = req.body || {};
+  const { title, level, desc, fullDescription, program, price, duration, category, type, bonus, maxParticipants, equipment, minParticipants, scheduleMode, fixedDate, formateurId, archived } = req.body || {};
+  if (formateurId !== undefined && !formateurId) return res.status(400).json({ error: 'Le formateur est requis' });
   let parsedMax;
   if (maxParticipants !== undefined) {
     const n = Number.parseInt(maxParticipants, 10);
@@ -47,6 +48,7 @@ export default requireAuth(async function handler(req, res) {
       minParticipants: parsedMin,
       scheduleMode,
       fixedDate: cleanFixedDate,
+      formateurId,
       archived,
     });
     if (!topic) return res.status(404).json({ error: 'Formation introuvable' });

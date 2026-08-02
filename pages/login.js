@@ -75,7 +75,7 @@ export default function Login() {
             <form onSubmit={handleSubmit}>
               {(error || errorMsg) && <div className="form-error">{error || errorMsg}</div>}
               <div className="form-group">
-                <label className="form-label">Email client Filme</label>
+                <label className="form-label">Email</label>
                 <input
                   type="email"
                   className="form-input"
@@ -100,6 +100,7 @@ export default function Login() {
 export async function getServerSideProps(ctx) {
   const session = getSession(ctx.req);
   if (session?.isAdmin) return { redirect: { destination: '/', permanent: false } };
+  if (session?.isFormateur) return { redirect: { destination: '/formateur', permanent: false } };
   if (session) return { redirect: { destination: '/mes-inscriptions', permanent: false } };
   return { props: {} };
 }
