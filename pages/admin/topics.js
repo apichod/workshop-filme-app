@@ -65,11 +65,12 @@ function NewTopicForm({ onCreated }) {
   );
 }
 
-function TopicRow({ topic, onSaved }) {
+function TopicRow({ topic, onSaved, onDeleted }) {
   const [form, setForm] = useState({ title: topic.title, level: topic.level, desc: topic.desc });
   const [dirty, setDirty] = useState(false);
   const [loading, setLoading] = useState(false);
   const [archiving, setArchiving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState('');
 
   function change(field, value) {
@@ -116,15 +117,37 @@ function TopicRow({ topic, onSaved }) {
     }
   }
 
+  async function remove() {
+    if (!window.confirm(`Supprimer définitivement « ${topic.title} » ? Cette action est irréversible.`)) return;
+    setDeleting(true);
+    setError('');
+    try {
+      const res = await fetch(`/api/admin/topics/${topic.id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Erreur');
+      onDeleted(topic.id);
+    } catch (err) {
+      setError(err.message);
+      setDeleting(false);
+    }
+  }
+
   return (
     <div className="card" style={{ padding: 20, marginBottom: 16, opacity: topic.archived ? 0.6 : 1 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12, gap: 12 }}>
         <span className={`badge ${topic.archived ? 'badge-gray' : 'badge-green'}`}>
           {topic.archived ? 'Archivée (masquée)' : 'Visible sur le site'}
         </span>
-        <button className="btn btn-ghost btn-sm" onClick={toggleArchived} disabled={archiving}>
-          {archiving ? '…' : topic.archived ? 'Désarchiver' : 'Archiver'}
-        </button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button className="btn btn-ghost btn-sm" onClick={toggleArchived} disabled={archiving}>
+            {archiving ? '…' : topic.archived ? 'Désarchiver' : 'Archiver'}
+          </button>
+          {topic.archived && (
+            <button className="btn btn-ghost btn-sm" onClick={remove} disabled={deleting} style={{ color: '#c0392b' }}>
+              {deleting ? '…' : 'Supprimer'}
+            </button>
+          )}
+        </div>
       </div>
 
       {error && <div className="form-error" style={{ marginBottom: 12 }}>{error}</div>}
@@ -168,6 +191,9 @@ export default function AdminTopics({ admin }) {
   function addToList(created) {
     setTopics((list) => [...list, created]);
   }
+  function removeFromList(id) {
+    setTopics((list) => list.filter((t) => t.id !== id));
+  }
 
   return (
     <>
@@ -190,7 +216,7 @@ export default function AdminTopics({ admin }) {
 
         {error && <div className="form-error">{error}</div>}
         {!topics && !error && <div className="loading">Chargement…</div>}
-        {topics && topics.map((t) => <TopicRow key={t.id} topic={t} onSaved={updateInList} />)}
+        {topics && topics.map((t) => <TopicRow key={t.id} topic={t} onSaved={updateInList} onDeleted={removeFromList} />)}
       </div>
     </>
   );

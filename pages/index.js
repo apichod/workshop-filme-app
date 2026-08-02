@@ -284,8 +284,9 @@ function TopicDetailModal({ topic, onClose, onRegister }) {
 }
 
 // ─── Carte formation — mode normal + popups édition/détail (admin) ───────────
-function TopicCard({ topic, index, isAdmin, onOpenRegister, onSaved }) {
+function TopicCard({ topic, index, isAdmin, onOpenRegister, onSaved, onDeleted }) {
   const [archiving, setArchiving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState('');
   const [showDetail, setShowDetail] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
@@ -306,6 +307,21 @@ function TopicCard({ topic, index, isAdmin, onOpenRegister, onSaved }) {
       setError(err.message);
     } finally {
       setArchiving(false);
+    }
+  }
+
+  async function remove() {
+    if (!window.confirm(`Supprimer définitivement « ${topic.title} » ? Cette action est irréversible.`)) return;
+    setDeleting(true);
+    setError('');
+    try {
+      const res = await fetch(`/api/admin/topics/${topic.id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Erreur');
+      onDeleted(topic.id);
+    } catch (err) {
+      setError(err.message);
+      setDeleting(false);
     }
   }
 
@@ -336,6 +352,11 @@ function TopicCard({ topic, index, isAdmin, onOpenRegister, onSaved }) {
             <button type="button" className="btn btn-ghost btn-sm" onClick={toggleArchived} disabled={archiving}>
               {archiving ? '…' : topic.archived ? 'Désarchiver' : 'Archiver'}
             </button>
+            {topic.archived && (
+              <button type="button" className="btn btn-ghost btn-sm" onClick={remove} disabled={deleting} style={{ color: '#c0392b' }}>
+                {deleting ? '…' : 'Supprimer'}
+              </button>
+            )}
           </>
         )}
       </div>
@@ -760,6 +781,9 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
   function addTopicToList(created) {
     setTopics((list) => [...list, created]);
   }
+  function removeTopicFromList(id) {
+    setTopics((list) => list.filter((t) => t.id !== id));
+  }
 
   async function saveContent(key, value) {
     try {
@@ -1046,7 +1070,7 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
           ) : (
             <div className="topics-grid">
               {filteredTopics.map((t) => (
-                <TopicCard key={t.id} topic={t} index={topics.indexOf(t)} isAdmin={isAdmin} onOpenRegister={(id) => openModal(id, null)} onSaved={updateTopicInList} />
+                <TopicCard key={t.id} topic={t} index={topics.indexOf(t)} isAdmin={isAdmin} onOpenRegister={(id) => openModal(id, null)} onSaved={updateTopicInList} onDeleted={removeTopicFromList} />
               ))}
               {isAdmin && <NewTopicCard onCreated={addTopicToList} />}
             </div>
