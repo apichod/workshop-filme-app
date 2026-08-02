@@ -2,7 +2,9 @@ import { supabaseAdmin } from '../../lib/supabase';
 import { getCustomerByEmail } from '../../lib/booqable';
 import { sendWorkshopConfirmation, sendWorkshopValidated } from '../../lib/mailer';
 import { CAPACITY, getTopicById, isValidWeekdayDate, topicWeekday, formatSaturday } from '../../lib/topics';
-import { isDateClosed } from '../../lib/closedDates';
+import { getSiteContent } from '../../lib/content';
+import { getAllFormateurs } from '../../lib/formateurs';
+import { parseAvailability, isTopicDateAvailable } from '../../lib/availability';
 import { cancelConflictingSessions, isDateTakenByAnotherTopic, effectiveThreshold, isPriorityTopic } from '../../lib/sessions';
 
 export default async function handler(req, res) {
@@ -31,8 +33,16 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Merci de choisir une date valide à venir' });
     }
 
-    // ─── Ce samedi a-t-il été fermé aux inscriptions (préférences admin) ? ───
-    if (await isDateClosed(dateIso)) return res.status(400).json({ error: 'date_closed' });
+    // ─── La salle de cours ET tous les formateurs assignés à la formation
+    // sont-ils disponibles à cette date (préférences admin) ? ────────────────
+    const [siteContent, allFormateurs] = await Promise.all([getSiteContent(), getAllFormateurs()]);
+    const roomAvailability = parseAvailability(siteContent.classroom_availability_json);
+    const topicFormateurs = (topic.formateurIds || [])
+      .map((fid) => allFormateurs.find((f) => f.id === fid))
+      .filter(Boolean);
+    if (!isTopicDateAvailable({ roomAvailability, formateurs: topicFormateurs, dateIso })) {
+      return res.status(400).json({ error: 'date_closed' });
+    }
 
     // ─── Un seul workshop par samedi : une autre formation est-elle déjà
     // validée (ou réservée via une date fixe) à cette date ? Une formation

@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import Head from 'next/head';
 import { getOpenSessions } from '../lib/sessions';
-import { getVisibleTopics, getAllTopics, CAPACITY, VALIDATION_THRESHOLD, PRICE_LABEL, TOPIC_CATEGORIES, TOPIC_TYPES, SCHEDULE_OPTIONS, nextWeekdayDates, topicWeekday, scheduleOption, yearSaturdays, formatSaturday, formatPrice, parsePriceValue } from '../lib/topics';
+import { getVisibleTopics, getAllTopics, CAPACITY, VALIDATION_THRESHOLD, PRICE_LABEL, TOPIC_CATEGORIES, TOPIC_TYPES, SCHEDULE_OPTIONS, nextWeekdayDates, topicWeekday, scheduleOption, formatSaturday, formatPrice, parsePriceValue } from '../lib/topics';
 import { getSiteContent, CONTENT_DEFAULTS } from '../lib/content';
-import { getClosedDates } from '../lib/closedDates';
+import { parseAvailability, isTopicDateAvailable } from '../lib/availability';
 import { getAllFormateurs, getVisibleFormateurs } from '../lib/formateurs';
 import { getSession } from '../lib/auth';
 import AdminBar from '../components/AdminBar';
@@ -917,81 +917,33 @@ function TopicsJsonModal({ topics, onClose, onImported }) {
   );
 }
 
-// ─── Popup admin "Préférences" — samedis inclus/exclus sur un an ────────────
-function monthKey(dateIso) {
-  return dateIso.slice(0, 7); // "2026-08"
-}
-function monthLabel(dateIso) {
-  const d = new Date(`${dateIso}T00:00:00`);
-  const s = d.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
-  return s.charAt(0).toUpperCase() + s.slice(1);
-}
-function dayLabel(dateIso) {
-  const d = new Date(`${dateIso}T00:00:00`);
-  return d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' });
-}
-
-function SaturdaysPreferences({ closedDates, onToggle }) {
-  const [pending, setPending] = useState(null); // date en cours d'enregistrement
+// ─── Popup admin "Préférences" — disponibilité de la salle de cours ─────────
+// Reprend exactement le même éditeur que la disponibilité d'un formateur
+// (AvailabilityEditor, plus bas dans ce fichier — créneaux hebdomadaires +
+// calendrier + dates spécifiques), mais pour la salle de cours : une date
+// n'est proposée à l'inscription que si la salle ET tous les formateurs
+// assignés à la formation sont disponibles ce jour-là (cf. lib/availability.js).
+function ClassroomAvailabilityPreferences({ value, onSave }) {
   const [error, setError] = useState('');
-  const year = yearSaturdays(52);
-  const closedSet = new Set(closedDates);
 
-  const groups = [];
-  for (const dateIso of year) {
-    const key = monthKey(dateIso);
-    let group = groups.find((g) => g.key === key);
-    if (!group) { group = { key, label: monthLabel(dateIso), dates: [] }; groups.push(group); }
-    group.dates.push(dateIso);
-  }
-
-  async function toggle(dateIso, closed) {
-    setPending(dateIso);
+  async function handleChange(next) {
     setError('');
     try {
-      await onToggle(dateIso, closed);
+      await onSave(next);
     } catch (err) {
       setError(err.message || 'Erreur');
-    } finally {
-      setPending(null);
     }
   }
 
   return (
     <>
       <p style={{ color: 'var(--text-muted)', fontSize: 13, marginTop: 8, marginBottom: 16 }}>
-        Décochez un samedi (congés, jour férié, fermeture exceptionnelle…) pour qu'il ne soit plus proposé
-        à l'inscription. Il n'apparaîtra plus dans le formulaire, et une éventuelle tentative d'inscription
-        directe sur cette date sera refusée.
+        Une date n'est proposée à l'inscription que si la salle ET tous les formateurs assignés à la
+        formation sont disponibles ce jour-là. Tant qu'aucune date n'est cochée ci-dessous, aucune session
+        ne peut être proposée.
       </p>
-
       {error && <div className="form-error">{error}</div>}
-
-      {groups.map((g) => (
-        <div key={g.key} style={{ marginBottom: 16 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', marginBottom: 8 }}>{g.label}</div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: 8 }}>
-            {g.dates.map((dateIso) => {
-              const closed = closedSet.has(dateIso);
-              return (
-                <label
-                  key={dateIso}
-                  className="checkbox-item"
-                  style={{ opacity: pending === dateIso ? 0.5 : 1, textDecoration: closed ? 'line-through' : 'none', color: closed ? 'var(--text-muted)' : 'var(--text)' }}
-                >
-                  <input
-                    type="checkbox"
-                    checked={!closed}
-                    disabled={pending === dateIso}
-                    onChange={(e) => toggle(dateIso, !e.target.checked)}
-                  />
-                  {dayLabel(dateIso)}
-                </label>
-              );
-            })}
-          </div>
-        </div>
-      ))}
+      <AvailabilityEditor value={normalizeAvailability(value)} onChange={handleChange} />
     </>
   );
 }
@@ -1104,61 +1056,6 @@ function RegistrationsPreferences({ onChanged }) {
                 ))}
               </div>
             )}
-          </div>
-        ))
-      )}
-    </>
-  );
-}
-
-function ActiveTopicsPreferences({ topics, onDeleted }) {
-  const [error, setError] = useState('');
-  const [deletingId, setDeletingId] = useState(null);
-  const activeTopics = topics.filter((t) => !t.archived);
-
-  async function remove(topic) {
-    if (!window.confirm(`Supprimer définitivement « ${topic.title} » ? Cette action est irréversible.`)) return;
-    setDeletingId(topic.id);
-    setError('');
-    try {
-      const res = await fetch(`/api/admin/topics/${topic.id}`, { method: 'DELETE' });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Erreur');
-      onDeleted(topic.id);
-    } catch (err) {
-      setError(err.message || 'Erreur');
-    } finally {
-      setDeletingId(null);
-    }
-  }
-
-  return (
-    <>
-      <p style={{ color: 'var(--text-muted)', fontSize: 13, marginTop: 8, marginBottom: 16 }}>
-        Supprimez définitivement une formation active si besoin (créée par erreur, doublon…). Impossible si
-        des sessions (passées ou à venir) lui sont déjà rattachées — archivez-la plutôt dans ce cas.
-      </p>
-
-      {error && <div className="form-error">{error}</div>}
-
-      {activeTopics.length === 0 ? (
-        <div className="empty">Aucune formation active pour le moment.</div>
-      ) : (
-        activeTopics.map((t) => (
-          <div
-            key={t.id}
-            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, fontSize: 13, padding: '8px 0', borderBottom: '1px solid var(--border)' }}
-          >
-            <span>{t.title}</span>
-            <button
-              type="button"
-              className="btn btn-ghost btn-sm"
-              disabled={deletingId === t.id}
-              onClick={() => remove(t)}
-              style={{ color: '#c0392b' }}
-            >
-              {deletingId === t.id ? '…' : 'Supprimer'}
-            </button>
           </div>
         ))
       )}
@@ -2057,8 +1954,8 @@ function FormateursPreferences({ formateurs, onCreated, onUpdated, onDeleted, to
   );
 }
 
-function PreferencesModal({ closedDates, onToggle, onSessionsChanged, topics, onTopicDeleted, onTopicUpdated, formateurs, onFormateurCreated, onFormateurUpdated, onFormateurDeleted, onClose }) {
-  const [tab, setTab] = useState('samedis');
+function PreferencesModal({ classroomAvailability, onSaveClassroomAvailability, onSessionsChanged, topics, onTopicUpdated, formateurs, onFormateurCreated, onFormateurUpdated, onFormateurDeleted, onClose }) {
+  const [tab, setTab] = useState('salle');
 
   return (
     <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
@@ -2067,15 +1964,13 @@ function PreferencesModal({ closedDates, onToggle, onSessionsChanged, topics, on
         <h2>Préférences</h2>
 
         <div style={{ display: 'flex', gap: 8, marginTop: 16, marginBottom: 4, flexWrap: 'wrap' }}>
-          <button type="button" className={`btn btn-sm ${tab === 'samedis' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setTab('samedis')}>Samedis proposés</button>
+          <button type="button" className={`btn btn-sm ${tab === 'salle' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setTab('salle')}>Disponibilité salle de cours</button>
           <button type="button" className={`btn btn-sm ${tab === 'inscriptions' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setTab('inscriptions')}>Inscriptions</button>
-          <button type="button" className={`btn btn-sm ${tab === 'formations' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setTab('formations')}>Formations actives</button>
           <button type="button" className={`btn btn-sm ${tab === 'formateurs' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setTab('formateurs')}>Formateurs</button>
         </div>
 
-        {tab === 'samedis' && <SaturdaysPreferences closedDates={closedDates} onToggle={onToggle} />}
+        {tab === 'salle' && <ClassroomAvailabilityPreferences value={classroomAvailability} onSave={onSaveClassroomAvailability} />}
         {tab === 'inscriptions' && <RegistrationsPreferences onChanged={onSessionsChanged} />}
-        {tab === 'formations' && <ActiveTopicsPreferences topics={topics} onDeleted={onTopicDeleted} />}
         {tab === 'formateurs' && (
           <FormateursPreferences
             formateurs={formateurs}
@@ -2270,7 +2165,7 @@ function SessionsCalendar({ sessions, onSelect }) {
   );
 }
 
-export default function Home({ initialSessions, initialTopics, initialContent, initialClosedDates, initialFormateurs, isAdmin, session }) {
+export default function Home({ initialSessions, initialTopics, initialContent, initialFormateurs, isAdmin, session }) {
   const [sessions, setSessions] = useState(initialSessions);
   const [topics, setTopics] = useState(initialTopics);
   const [content, setContent] = useState(initialContent);
@@ -2301,7 +2196,6 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
   const [showTerms, setShowTerms] = useState(false);
   const [showTopicsJson, setShowTopicsJson] = useState(false);
   const [showPreferences, setShowPreferences] = useState(false);
-  const [closedDates, setClosedDates] = useState(initialClosedDates || []);
   const [sessionSort, setSessionSort] = useState('rate'); // 'rate' (défaut) ou 'date'
   const [sessionsView, setSessionsView] = useState('liste'); // 'liste' | 'calendrier'
   const [sessionTypeFilter, setSessionTypeFilter] = useState([]); // types cochés dans "Filtrer par : Type" ([] = tous)
@@ -2458,13 +2352,21 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
     setTopicStatusFilter((list) => (list.includes(t) ? list.filter((x) => x !== t) : [...list, t]));
   }
   const modalTopic = modal ? topics.find((t) => t.id === modal.topicId) : null;
+  // Une date n'est proposée que si la salle de cours ET tous les formateurs
+  // assignés à la formation sont disponibles ce jour-là (cf. lib/availability.js
+  // — remplace l'ancien mécanisme de samedis fermés).
+  const roomAvailability = parseAvailability(content.classroom_availability_json);
+  const modalFormateurs = modalTopic
+    ? (modalTopic.formateurIds || []).map((id) => formateurs.find((f) => f.id === id)).filter(Boolean)
+    : [];
+  const isModalDateAvailable = (iso) => isTopicDateAvailable({ roomAvailability, formateurs: modalFormateurs, dateIso: iso });
   // Liste de dates proposées dans la popup d'inscription : les prochaines
-  // occurrences du jour de semaine de la formation (mercredi/vendredi/samedi),
-  // ou sa date fixe unique si elle en a une.
+  // occurrences disponibles du jour de semaine de la formation
+  // (mercredi/vendredi/samedi), ou sa date fixe unique si elle en a une.
   const modalDates = modalTopic?.fixedDate
     ? [modalTopic.fixedDate]
     : modalTopic
-      ? nextWeekdayDates(topicWeekday(modalTopic), 8, closedDates)
+      ? nextWeekdayDates(topicWeekday(modalTopic), 8, isModalDateAvailable)
       : [];
 
   function updateTopicInList(updated) {
@@ -2572,17 +2474,6 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
   }
   function toggleHeroEnabled(index) {
     updateHero(index, { enabled: heroes[index].enabled === false });
-  }
-
-  async function toggleClosedDate(dateIso, closed) {
-    const res = await fetch('/api/admin/closed-dates', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ date: dateIso, closed }),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Erreur');
-    setClosedDates((list) => (closed ? [...new Set([...list, dateIso])] : list.filter((d) => d !== dateIso)));
   }
 
   function openModal(topicId, dateIso) {
@@ -3233,11 +3124,10 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
 
       {showPreferences && (
         <PreferencesModal
-          closedDates={closedDates}
-          onToggle={toggleClosedDate}
+          classroomAvailability={roomAvailability}
+          onSaveClassroomAvailability={(next) => saveContent('classroom_availability_json', JSON.stringify(next))}
           onSessionsChanged={refreshSessions}
           topics={topics}
-          onTopicDeleted={removeTopicFromList}
           onTopicUpdated={updateTopicInList}
           formateurs={formateurs}
           onFormateurCreated={addFormateurToList}
@@ -3255,11 +3145,10 @@ export async function getServerSideProps(ctx) {
   const isAdmin = !!session?.isAdmin;
 
   try {
-    const [sessions, topics, content, closedDates, formateurs] = await Promise.all([
+    const [sessions, topics, content, formateurs] = await Promise.all([
       getOpenSessions(),
       isAdmin ? getAllTopics() : getVisibleTopics(),
       getSiteContent(),
-      getClosedDates(),
       isAdmin ? getAllFormateurs() : getVisibleFormateurs(),
     ]);
     return {
@@ -3267,7 +3156,6 @@ export async function getServerSideProps(ctx) {
         initialSessions: sessions,
         initialTopics: topics,
         initialContent: content,
-        initialClosedDates: closedDates,
         initialFormateurs: formateurs,
         isAdmin,
         session: session || null,
@@ -3280,7 +3168,6 @@ export async function getServerSideProps(ctx) {
         initialSessions: [],
         initialTopics: [],
         initialContent: CONTENT_DEFAULTS,
-        initialClosedDates: [],
         initialFormateurs: [],
         isAdmin,
         session: session || null,
