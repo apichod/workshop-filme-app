@@ -1130,6 +1130,9 @@ function ActiveTopicsPreferences({ topics, onDeleted }) {
 }
 
 // ─── Onglet Préférences — gestion des formateurs (CRUD) ──────────────────────
+// Nombre de formations affichées par page dans le catalogue ("Formations disponibles").
+const TOPICS_PAGE_SIZE = 6;
+
 const WEEKDAYS = [
   { key: 'lundi', label: 'Lundi' },
   { key: 'mardi', label: 'Mardi' },
@@ -2263,7 +2266,18 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
   const [sessionTypeFilter, setSessionTypeFilter] = useState([]); // types cochés dans "Filtrer par : Type" ([] = tous)
   const [topicTypeFilter, setTopicTypeFilter] = useState([]); // idem pour "Formations disponibles"
   const [topicStatusFilter, setTopicStatusFilter] = useState([]); // filtre "Statut : Programmé / Date flexible"
-  const [topicSort, setTopicSort] = useState(''); // '' (ordre par défaut), 'newest', 'price_desc', 'price_asc', 'popular'
+  const [topicSort, setTopicSort] = useState(''); // '' = "En vedette" (ordre manuel, sort_order), 'newest', 'price_desc', 'price_asc', 'popular'
+  const [topicPage, setTopicPage] = useState(1); // pagination du catalogue (TOPICS_PAGE_SIZE par page)
+  const [draggingTopicId, setDraggingTopicId] = useState(null); // id de la carte en cours de glisser-déposer (réorganisation "En vedette")
+  // Le glisser-déposer ne fait sens que sur l'ordre manuel complet et non
+  // filtré (tri "En vedette", aucun filtre actif) — sinon la position visuelle
+  // ne correspond plus à un ordre qu'on peut réellement persister.
+  const topicReorderEnabled = isAdmin && topicSort === '' && topicTypeFilter.length === 0 && topicStatusFilter.length === 0;
+  // Revenir à la page 1 dès que le filtre ou le tri change, pour ne pas rester
+  // bloqué sur une page qui n'existe plus dans la nouvelle liste.
+  useEffect(() => {
+    setTopicPage(1);
+  }, [topicTypeFilter, topicStatusFilter, topicSort]);
 
   const selectableTopics = topics.filter((t) => !t.archived);
   const usedSessionTypes = [...new Set(sessions.map((s) => s.topic?.type || 'Formation'))];
@@ -2330,6 +2344,36 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
   // le tri choisi (tri stable par ailleurs : sort() est stable en JS, l'ordre
   // établi juste au-dessus est préservé au sein de chaque groupe).
   filteredTopics.sort((a, b) => (a.archived === b.archived ? 0 : a.archived ? 1 : -1));
+
+  // Pagination du catalogue.
+  const totalTopicPages = Math.max(1, Math.ceil(filteredTopics.length / TOPICS_PAGE_SIZE));
+  const safeTopicPage = Math.min(topicPage, totalTopicPages);
+  const pageTopics = filteredTopics.slice((safeTopicPage - 1) * TOPICS_PAGE_SIZE, safeTopicPage * TOPICS_PAGE_SIZE);
+
+  // Glisser-déposer (tri "En vedette", sans filtre) : on reçoit l'id déposé
+  // et l'id de la carte survolée, on réordonne localement pageTopics, puis on
+  // replace ces mêmes formations aux mêmes positions dans le tableau complet
+  // `topics` avant d'envoyer l'ordre entier à l'API (cf. reorderTopics).
+  function handleTopicDrop(droppedId, targetId) {
+    if (!topicReorderEnabled || droppedId === targetId) return;
+    const order = pageTopics.map((t) => t.id);
+    const fromIdx = order.indexOf(droppedId);
+    const toIdx = order.indexOf(targetId);
+    if (fromIdx === -1 || toIdx === -1) return;
+    order.splice(toIdx, 0, order.splice(fromIdx, 1)[0]);
+
+    const slotIndices = pageTopics.map((t) => topics.findIndex((x) => x.id === t.id)).sort((a, b) => a - b);
+    const newTopics = [...topics];
+    slotIndices.forEach((slot, i) => {
+      newTopics[slot] = topics.find((t) => t.id === order[i]);
+    });
+    setTopics(newTopics);
+    fetch('/api/admin/topics/reorder', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ orderedIds: newTopics.map((t) => t.id) }),
+    }).catch(() => {});
+  }
 
   const sortedSessions = [...sessions].sort((a, b) =>
     sessionSort === 'date'
@@ -2799,7 +2843,7 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
               <span className="sort-label">Trier par :</span>
               <div className="sort-select-wrap">
                 <select className="sort-select" value={topicSort} onChange={(e) => setTopicSort(e.target.value)}>
-                  <option value="">Par défaut</option>
+                  <option value="">En vedette</option>
                   <option value="newest">Nouveautés</option>
                   <option value="price_desc">Prix du + cher au - cher</option>
                   <option value="price_asc">Prix du - cher au + cher</option>
@@ -2815,12 +2859,42 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
           ) : filteredTopics.length === 0 ? (
             <div className="card"><div className="empty">Aucune formation ne correspond à ce filtre.</div></div>
           ) : (
-            <div className="topics-grid">
-              {filteredTopics.map((t) => (
-                <TopicCard key={t.id} topic={t} index={topics.indexOf(t)} isAdmin={isAdmin} onOpenRegister={(id) => openModal(id, null)} onSaved={updateTopicInList} onDeleted={removeTopicFromList} onTopicsReplaced={setTopics} formateurs={formateurs} />
-              ))}
-              {isAdmin && <NewTopicCard onCreated={addTopicToList} formateurs={formateurs} />}
-            </div>
+            <>
+              <div className="topics-grid">
+                {pageTopics.map((t) => (
+                  <div
+                    key={t.id}
+                    draggable={topicReorderEnabled}
+                    onDragStart={() => setDraggingTopicId(t.id)}
+                    onDragOver={(e) => { if (topicReorderEnabled) e.preventDefault(); }}
+                    onDrop={() => { if (draggingTopicId) handleTopicDrop(draggingTopicId, t.id); setDraggingTopicId(null); }}
+                    onDragEnd={() => setDraggingTopicId(null)}
+                    className={topicReorderEnabled ? 'topic-card-draggable' : undefined}
+                    style={draggingTopicId === t.id ? { opacity: 0.4 } : undefined}
+                  >
+                    <TopicCard topic={t} index={topics.indexOf(t)} isAdmin={isAdmin} onOpenRegister={(id) => openModal(id, null)} onSaved={updateTopicInList} onDeleted={removeTopicFromList} onTopicsReplaced={setTopics} formateurs={formateurs} />
+                  </div>
+                ))}
+                {isAdmin && safeTopicPage === totalTopicPages && <NewTopicCard onCreated={addTopicToList} formateurs={formateurs} />}
+              </div>
+
+              {totalTopicPages > 1 && (
+                <div className="topics-pagination">
+                  <button type="button" className="btn btn-ghost btn-sm" onClick={() => setTopicPage((p) => Math.max(1, p - 1))} disabled={safeTopicPage === 1}>‹</button>
+                  {Array.from({ length: totalTopicPages }, (_, i) => i + 1).map((p) => (
+                    <button
+                      key={p}
+                      type="button"
+                      className={`topics-page-btn ${p === safeTopicPage ? 'active' : ''}`}
+                      onClick={() => setTopicPage(p)}
+                    >
+                      {p}
+                    </button>
+                  ))}
+                  <button type="button" className="btn btn-ghost btn-sm" onClick={() => setTopicPage((p) => Math.min(totalTopicPages, p + 1))} disabled={safeTopicPage === totalTopicPages}>›</button>
+                </div>
+              )}
+            </>
           )}
         </section>
 
