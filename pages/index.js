@@ -216,7 +216,12 @@ function EditableText({ isAdmin, value, onSave, tag: Tag = 'span', multiline = f
   }
 
   return (
-    <Tag className={className} style={{ ...style, cursor: 'pointer' }} onClick={() => setEditing(true)} title="Cliquer pour éditer">
+    <Tag
+      className={className}
+      style={{ ...style, cursor: 'pointer' }}
+      onClick={() => { setDraft(value); setEditing(true); }}
+      title="Cliquer pour éditer"
+    >
       {value} <span style={{ fontSize: 11, opacity: 0.4 }}>✏️</span>
     </Tag>
   );
@@ -2515,11 +2520,16 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
 
   // Bannières Hero — toute la liste est réenregistrée à chaque modification
   // (une seule clé JSON en base, cf. lib/content.js heroes_json).
+  // Important : bien "return" la promesse de saveContent jusqu'ici — sinon
+  // EditableText (qui fait `await onSave(draft)` avant de refermer l'édition)
+  // referme immédiatement, avant que le nouveau contenu soit revenu du
+  // serveur ; le champ réaffiche alors brièvement l'ancien texte tant que le
+  // re-render avec le contenu à jour n'a pas eu lieu.
   function updateHeroes(nextHeroes) {
-    saveContent('heroes_json', JSON.stringify(nextHeroes));
+    return saveContent('heroes_json', JSON.stringify(nextHeroes));
   }
   function updateHero(index, patch) {
-    updateHeroes(heroes.map((h, i) => (i === index ? { ...h, ...patch } : h)));
+    return updateHeroes(heroes.map((h, i) => (i === index ? { ...h, ...patch } : h)));
   }
   function addHero() {
     const next = [...heroes, newHero()];
