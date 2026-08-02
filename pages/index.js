@@ -7,7 +7,7 @@ import { getClosedDates } from '../lib/closedDates';
 import { getSession } from '../lib/auth';
 import AdminBar from '../components/AdminBar';
 import UserBar from '../components/UserBar';
-import Icon from '../components/Icon';
+import Icon, { ICON_PATHS } from '../components/Icon';
 
 // ─── Vignette placeholder (tant qu'aucune vraie photo n'est fournie) ─────────
 function ImgPlaceholder({ className, iconSize = 22 }) {
@@ -18,18 +18,65 @@ function ImgPlaceholder({ className, iconSize = 22 }) {
   );
 }
 
-// ─── Bannière Hero n°2/3 — titre + texte + prix + liste à puces, éditables ───
-function HeroInfoSlide({ isAdmin, content, saveContent, titleKey, leadKey, priceKey, bulletKeys }) {
+// ─── Sélecteur d'icône (admin) — cliquer l'icône ouvre un petit choix ────────
+const BULLET_ICON_CHOICES = Object.keys(ICON_PATHS);
+
+function BulletIconPicker({ isAdmin, icon, onChange }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function onDocClick(e) {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    }
+    document.addEventListener('mousedown', onDocClick);
+    return () => document.removeEventListener('mousedown', onDocClick);
+  }, [open]);
+
+  if (!isAdmin) {
+    return <span className="icon-wrap"><Icon name={icon} /></span>;
+  }
+
+  return (
+    <span className="icon-wrap icon-picker" ref={ref}>
+      <button type="button" className="icon-picker-trigger" onClick={() => setOpen((o) => !o)} title="Changer l'icône">
+        <Icon name={icon} />
+      </button>
+      {open && (
+        <span className="icon-picker-panel">
+          {BULLET_ICON_CHOICES.map((name) => (
+            <button
+              key={name}
+              type="button"
+              className={`icon-picker-option ${name === icon ? 'active' : ''}`}
+              onClick={() => { onChange(name); setOpen(false); }}
+              title={name}
+            >
+              <Icon name={name} size={16} />
+            </button>
+          ))}
+        </span>
+      )}
+    </span>
+  );
+}
+
+// ─── Bannière Hero n°2/3 — titre + texte + liste à puces, éditables ──────────
+function HeroInfoSlide({ isAdmin, content, saveContent, titleKey, leadKey, bullets }) {
   return (
     <div className="hero-copy">
       <EditableText isAdmin={isAdmin} tag="h1" value={content[titleKey]} onSave={(v) => saveContent(titleKey, v)} />
       <EditableText isAdmin={isAdmin} tag="p" className="lead" multiline value={content[leadKey]} onSave={(v) => saveContent(leadKey, v)} />
-      <EditableText isAdmin={isAdmin} tag="div" className="hero-price-badge" value={content[priceKey]} onSave={(v) => saveContent(priceKey, v)} />
       <ul className="hero-bullets">
-        {bulletKeys.map((k) => (
-          <li key={k}>
-            <Icon name="check" size={14} />
-            <EditableText isAdmin={isAdmin} tag="span" value={content[k]} onSave={(v) => saveContent(k, v)} />
+        {bullets.map(({ textKey, iconKey, defaultIcon }) => (
+          <li key={textKey}>
+            <BulletIconPicker
+              isAdmin={isAdmin}
+              icon={content[iconKey] || defaultIcon}
+              onChange={(name) => saveContent(iconKey, name)}
+            />
+            <EditableText isAdmin={isAdmin} tag="span" value={content[textKey]} onSave={(v) => saveContent(textKey, v)} />
           </li>
         ))}
       </ul>
@@ -1119,6 +1166,13 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
   const [topics, setTopics] = useState(initialTopics);
   const [content, setContent] = useState(initialContent);
   const [heroSlide, setHeroSlide] = useState(0);
+  // Défilement automatique du carrousel Hero (visiteurs uniquement — coupé en
+  // mode admin pour ne pas changer de slide pendant une édition en cours).
+  useEffect(() => {
+    if (isAdmin) return;
+    const id = setInterval(() => setHeroSlide((s) => (s + 1) % 3), 6000);
+    return () => clearInterval(id);
+  }, [heroSlide, isAdmin]);
   const [modal, setModal] = useState(null); // { topicId, dates: string[] }
   const [showModalTopicDetail, setShowModalTopicDetail] = useState(false);
   const [form, setForm] = useState({ name: '', email: '' });
@@ -1364,8 +1418,12 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
               saveContent={saveContent}
               titleKey="hero2_title"
               leadKey="hero2_lead"
-              priceKey="hero2_price"
-              bulletKeys={['hero2_bullet_1', 'hero2_bullet_2', 'hero2_bullet_3', 'hero2_bullet_4']}
+              bullets={[
+                { textKey: 'hero2_bullet_1', iconKey: 'hero2_bullet_1_icon', defaultIcon: 'users' },
+                { textKey: 'hero2_bullet_2', iconKey: 'hero2_bullet_2_icon', defaultIcon: 'camera' },
+                { textKey: 'hero2_bullet_3', iconKey: 'hero2_bullet_3_icon', defaultIcon: 'user' },
+                { textKey: 'hero2_bullet_4', iconKey: 'hero2_bullet_4_icon', defaultIcon: 'shield' },
+              ]}
             />
           )}
           {heroSlide === 2 && (
@@ -1375,8 +1433,12 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
               saveContent={saveContent}
               titleKey="hero3_title"
               leadKey="hero3_lead"
-              priceKey="hero3_price"
-              bulletKeys={['hero3_bullet_1', 'hero3_bullet_2', 'hero3_bullet_3', 'hero3_bullet_4']}
+              bullets={[
+                { textKey: 'hero3_bullet_1', iconKey: 'hero3_bullet_1_icon', defaultIcon: 'users' },
+                { textKey: 'hero3_bullet_2', iconKey: 'hero3_bullet_2_icon', defaultIcon: 'camera' },
+                { textKey: 'hero3_bullet_3', iconKey: 'hero3_bullet_3_icon', defaultIcon: 'user' },
+                { textKey: 'hero3_bullet_4', iconKey: 'hero3_bullet_4_icon', defaultIcon: 'shield' },
+              ]}
             />
           )}
         </div>
