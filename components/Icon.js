@@ -13,6 +13,7 @@ export const ICON_PATHS = {
   camera: 'M4 8.5A1.5 1.5 0 0 1 5.5 7h2l1-2h7l1 2h2A1.5 1.5 0 0 1 20 8.5v9A1.5 1.5 0 0 1 18.5 19h-13A1.5 1.5 0 0 1 4 17.5v-9Z M12 16.2a3.7 3.7 0 1 0 0-7.4 3.7 3.7 0 0 0 0 7.4Z',
   user: 'M12 12a3.7 3.7 0 1 0 0-7.4 3.7 3.7 0 0 0 0 7.4ZM5 19.5c0-3.6 3.1-6.5 7-6.5s7 2.9 7 6.5',
   chevronDown: 'M5 8.5l7 7 7-7',
+  list: 'M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01',
 };
 
 export default function Icon({ name, size = 20, style, ...props }) {

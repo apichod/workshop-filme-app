@@ -1129,13 +1129,19 @@ function buildMonthCells(monthDate) {
 }
 
 // Petit calendrier mensuel : on clique sur un jour pour le marquer (ou
-// démarquer) comme disponible — le jour sélectionné s'affiche avec une croix.
-function AvailabilityCalendar({ dates, onToggle }) {
+// démarquer) comme disponible.
+// - variant "compact" (par défaut) : le jour sélectionné s'affiche avec une croix.
+// - variant "detailed" : cases plus grandes, affichant directement les
+//   horaires applicables (créneaux du jour de semaine correspondant, ou
+//   l'horaire d'une "date spécifique" le cas échéant) au lieu d'une croix.
+function AvailabilityCalendar({ dates, onToggle, variant = 'compact', weeklySlots, dateOverrides }) {
   const [monthDate, setMonthDate] = useState(() => { const d = new Date(); d.setDate(1); d.setHours(0, 0, 0, 0); return d; });
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const cells = buildMonthCells(monthDate);
   const selectedSet = new Set(dates || []);
+  const overrideMap = new Map((dateOverrides || []).map((o) => [o.date, o]));
+  const detailed = variant === 'detailed';
 
   return (
     <div>
@@ -1154,6 +1160,36 @@ function AvailabilityCalendar({ dates, onToggle }) {
           const isPast = d < today;
           const isSelected = selectedSet.has(iso);
           const isToday = d.getTime() === today.getTime();
+          const override = overrideMap.get(iso);
+          const slots = override ? [{ start: override.start, end: override.end }] : (weeklySlots?.[weekdayKeyForDate(iso)] || []);
+
+          if (!detailed) {
+            return (
+              <button
+                key={iso}
+                type="button"
+                disabled={isPast}
+                onClick={() => onToggle(iso)}
+                title={isSelected ? 'Retirer — ne sera plus présent ce jour-là' : 'Marquer comme présent ce jour-là'}
+                style={{
+                  aspectRatio: '1',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderRadius: 6,
+                  fontSize: 12,
+                  cursor: isPast ? 'default' : 'pointer',
+                  border: isToday ? '1px solid var(--red)' : '1px solid var(--border)',
+                  background: isSelected ? '#e8ab5c' : 'transparent',
+                  color: isSelected ? '#fff' : isPast ? 'var(--text-muted)' : 'var(--text)',
+                  opacity: isPast ? 0.4 : 1,
+                }}
+              >
+                {isSelected ? '✕' : d.getDate()}
+              </button>
+            );
+          }
+
           return (
             <button
               key={iso}
@@ -1162,20 +1198,30 @@ function AvailabilityCalendar({ dates, onToggle }) {
               onClick={() => onToggle(iso)}
               title={isSelected ? 'Retirer — ne sera plus présent ce jour-là' : 'Marquer comme présent ce jour-là'}
               style={{
-                aspectRatio: '1',
+                minHeight: 54,
                 display: 'flex',
+                flexDirection: 'column',
                 alignItems: 'center',
-                justifyContent: 'center',
+                justifyContent: 'flex-start',
+                gap: 2,
+                padding: '4px 2px',
                 borderRadius: 6,
-                fontSize: 12,
                 cursor: isPast ? 'default' : 'pointer',
                 border: isToday ? '1px solid var(--red)' : '1px solid var(--border)',
-                background: isSelected ? '#e8ab5c' : 'transparent',
-                color: isSelected ? '#fff' : isPast ? 'var(--text-muted)' : 'var(--text)',
+                background: isSelected ? 'rgba(232,171,92,0.12)' : 'transparent',
                 opacity: isPast ? 0.4 : 1,
               }}
             >
-              {isSelected ? '✕' : d.getDate()}
+              <span style={{ fontSize: 11, fontWeight: isSelected ? 700 : 400, color: isPast ? 'var(--text-muted)' : 'var(--text)' }}>{d.getDate()}</span>
+              {isSelected && (
+                slots.length > 0 ? (
+                  <span style={{ fontSize: 9.5, lineHeight: 1.2, color: override ? '#b5732a' : 'var(--text-muted)', textAlign: 'center' }}>
+                    {slots.map((s, si) => <div key={si}>{s.start}–{s.end}</div>)}
+                  </span>
+                ) : (
+                  <span style={{ fontSize: 12, color: 'var(--red)' }} title="Aucun créneau défini pour ce jour de la semaine">⚠</span>
+                )
+              )}
             </button>
           );
         })}
@@ -1193,6 +1239,7 @@ function AvailabilityEditor({ value, onChange }) {
   const [addingDay, setAddingDay] = useState(null);
   const [drafts, setDrafts] = useState(() => WEEKDAYS.reduce((acc, d) => ({ ...acc, [d.key]: { start: '', end: '' } }), {}));
   const [overrideDraft, setOverrideDraft] = useState({ date: '', start: '', end: '' });
+  const [agendaView, setAgendaView] = useState('liste'); // 'liste' | 'calendrier'
 
   function setDraft(day, field, v) {
     setDrafts((d) => ({ ...d, [day]: { ...d[day], [field]: v } }));
@@ -1277,28 +1324,56 @@ function AvailabilityEditor({ value, onChange }) {
       </div>
 
       <div style={{ marginTop: 16, paddingTop: 14, borderTop: '1px solid var(--border)' }}>
-        <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>Dates de disponibilité</div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+          <div style={{ fontSize: 13, fontWeight: 600 }}>Dates de disponibilité</div>
+          <div style={{ display: 'flex', gap: 2, border: '1px solid var(--border)', borderRadius: 6, padding: 2 }}>
+            <button
+              type="button"
+              onClick={() => setAgendaView('liste')}
+              title="Vue liste"
+              style={{ display: 'flex', alignItems: 'center', border: 'none', borderRadius: 4, padding: '4px 6px', cursor: 'pointer', background: agendaView === 'liste' ? '#e8ab5c' : 'transparent', color: agendaView === 'liste' ? '#fff' : 'var(--text-muted)' }}
+            >
+              <Icon name="list" size={14} />
+            </button>
+            <button
+              type="button"
+              onClick={() => setAgendaView('calendrier')}
+              title="Vue calendrier"
+              style={{ display: 'flex', alignItems: 'center', border: 'none', borderRadius: 4, padding: '4px 6px', cursor: 'pointer', background: agendaView === 'calendrier' ? '#e8ab5c' : 'transparent', color: agendaView === 'calendrier' ? '#fff' : 'var(--text-muted)' }}
+            >
+              <Icon name="calendar" size={14} />
+            </button>
+          </div>
+        </div>
         <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 8 }}>
           Cochez les dates où il est présent — les horaires appliqués sont automatiquement ceux définis ci-dessus pour le jour de la semaine correspondant (ex : une date qui tombe un lundi applique les créneaux de « Lundi »).
         </div>
-        <div style={{ maxWidth: 320, margin: '0 auto' }}>
-          <AvailabilityCalendar dates={value.dates || []} onToggle={toggleDate} />
-        </div>
-        {(value.dates || []).length > 0 && (
-          <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 4 }}>
-            {(value.dates || []).slice().sort().map((iso) => {
-              const slots = value[weekdayKeyForDate(iso)] || [];
-              return (
-                <div key={iso} style={{ fontSize: 12, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                  <span style={{ fontWeight: 600 }}>{formatSaturday(iso)}</span>
-                  {slots.length > 0 ? (
-                    <span style={{ color: 'var(--text-muted)' }}>{slots.map((s) => `${s.start}–${s.end}`).join(', ')}</span>
-                  ) : (
-                    <span style={{ color: 'var(--red)' }}>⚠ Aucun créneau défini pour ce jour de la semaine</span>
-                  )}
-                </div>
-              );
-            })}
+        {agendaView === 'liste' ? (
+          <>
+            <div style={{ maxWidth: 320, margin: '0 auto' }}>
+              <AvailabilityCalendar dates={value.dates || []} onToggle={toggleDate} />
+            </div>
+            {(value.dates || []).length > 0 && (
+              <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                {(value.dates || []).slice().sort().map((iso) => {
+                  const slots = value[weekdayKeyForDate(iso)] || [];
+                  return (
+                    <div key={iso} style={{ fontSize: 12, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                      <span style={{ fontWeight: 600 }}>{formatSaturday(iso)}</span>
+                      {slots.length > 0 ? (
+                        <span style={{ color: 'var(--text-muted)' }}>{slots.map((s) => `${s.start}–${s.end}`).join(', ')}</span>
+                      ) : (
+                        <span style={{ color: 'var(--red)' }}>⚠ Aucun créneau défini pour ce jour de la semaine</span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </>
+        ) : (
+          <div style={{ maxWidth: 480, margin: '0 auto' }}>
+            <AvailabilityCalendar dates={value.dates || []} onToggle={toggleDate} variant="detailed" weeklySlots={value} dateOverrides={value.dateOverrides || []} />
           </div>
         )}
       </div>
