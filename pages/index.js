@@ -112,6 +112,13 @@ function scheduleLabel(topic) {
   return 'Date flexible : en fonction de la demande';
 }
 
+// Catégorie utilisée par le filtre "Statut" (Formations disponibles) : une
+// formation à date fixe est "Programmée", les autres suivent un planning
+// récurrent (mercredis/vendredis/samedis) donc "Date flexible".
+function topicStatusLabel(topic) {
+  return topic.scheduleMode === 'fixed' ? 'Programmé' : 'Date flexible';
+}
+
 // ─── Texte éditable en place (mode admin uniquement) ─────────────────────────
 function EditableText({ isAdmin, value, onSave, tag: Tag = 'span', multiline = false, className, style }) {
   const [editing, setEditing] = useState(false);
@@ -1126,7 +1133,7 @@ function TermsModal({ isAdmin, text, onSave, onClose }) {
 }
 
 // ─── Filtre "Type" du planning (Formations à venir) ──────────────────────────
-function SessionTypeFilter({ options, selected, onToggle, onReset }) {
+function SessionTypeFilter({ label = 'Type', options, selected, onToggle, onReset }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
 
@@ -1146,12 +1153,12 @@ function SessionTypeFilter({ options, selected, onToggle, onReset }) {
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
       >
-        Type <Icon name="chevronDown" size={13} />
+        {label} <Icon name="chevronDown" size={13} />
       </button>
       {open && (
         <div className="filter-panel">
           <div className="filter-panel-head">
-            <strong>Type</strong>
+            <strong>{label}</strong>
             <button type="button" className="filter-panel-reset" onClick={onReset}>Réinitialiser</button>
           </div>
           <div className="checkbox-list">
@@ -1191,18 +1198,22 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
   const [sessionSort, setSessionSort] = useState('rate'); // 'rate' (défaut) ou 'date'
   const [sessionTypeFilter, setSessionTypeFilter] = useState([]); // types cochés dans "Filtrer par : Type" ([] = tous)
   const [topicTypeFilter, setTopicTypeFilter] = useState([]); // idem pour "Formations disponibles"
+  const [topicStatusFilter, setTopicStatusFilter] = useState([]); // filtre "Statut : Programmé / Date flexible"
   const [topicSort, setTopicSort] = useState(''); // '' (ordre par défaut), 'newest', 'price_desc', 'price_asc', 'popular'
 
   const selectableTopics = topics.filter((t) => !t.archived);
   const usedSessionTypes = [...new Set(sessions.map((s) => s.topic?.type || 'Formation'))];
   const usedTopicTypes = [...new Set(topics.map((t) => t.type || 'Formation'))];
+  const usedTopicStatuses = [...new Set(topics.map((t) => topicStatusLabel(t)))];
   // Nombre total d'inscrits (toutes sessions à venir confondues) par formation
   // — sert de proxy à "Les plus demandées".
   const topicPopularity = new Map();
   sessions.forEach((s) => {
     topicPopularity.set(s.topicId, (topicPopularity.get(s.topicId) || 0) + s.count);
   });
-  const filteredTopics = (topicTypeFilter.length ? topics.filter((t) => topicTypeFilter.includes(t.type || 'Formation')) : topics).slice();
+  const filteredTopics = topics
+    .filter((t) => !topicTypeFilter.length || topicTypeFilter.includes(t.type || 'Formation'))
+    .filter((t) => !topicStatusFilter.length || topicStatusFilter.includes(topicStatusLabel(t)));
   if (topicSort === 'newest') filteredTopics.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
   else if (topicSort === 'price_desc') filteredTopics.sort((a, b) => parsePriceValue(b.price) - parsePriceValue(a.price));
   else if (topicSort === 'price_asc') filteredTopics.sort((a, b) => parsePriceValue(a.price) - parsePriceValue(b.price));
@@ -1226,6 +1237,9 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
   }
   function toggleTopicType(t) {
     setTopicTypeFilter((list) => (list.includes(t) ? list.filter((x) => x !== t) : [...list, t]));
+  }
+  function toggleTopicStatus(t) {
+    setTopicStatusFilter((list) => (list.includes(t) ? list.filter((x) => x !== t) : [...list, t]));
   }
   const modalTopic = modal ? topics.find((t) => t.id === modal.topicId) : null;
   // Liste de dates proposées dans la popup d'inscription : les prochaines
@@ -1595,15 +1609,27 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
             )}
           </div>
           <div className="filter-sort-row">
-            {usedTopicTypes.length > 1 && (
+            {(usedTopicTypes.length > 1 || usedTopicStatuses.length > 1) && (
               <div className="filter-row">
                 <span className="sort-label">Filtrer par :</span>
-                <SessionTypeFilter
-                  options={usedTopicTypes}
-                  selected={topicTypeFilter}
-                  onToggle={toggleTopicType}
-                  onReset={() => setTopicTypeFilter([])}
-                />
+                {usedTopicTypes.length > 1 && (
+                  <SessionTypeFilter
+                    label="Type"
+                    options={usedTopicTypes}
+                    selected={topicTypeFilter}
+                    onToggle={toggleTopicType}
+                    onReset={() => setTopicTypeFilter([])}
+                  />
+                )}
+                {usedTopicStatuses.length > 1 && (
+                  <SessionTypeFilter
+                    label="Statut"
+                    options={usedTopicStatuses}
+                    selected={topicStatusFilter}
+                    onToggle={toggleTopicStatus}
+                    onReset={() => setTopicStatusFilter([])}
+                  />
+                )}
               </div>
             )}
             <div className="sort-row" style={{ marginLeft: 'auto' }}>
