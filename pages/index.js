@@ -1175,13 +1175,148 @@ function FormateurFormModal({ formateur, onClose, onSaved }) {
   );
 }
 
+// Popup admin Export / Import JSON pour un formateur donné, accessible
+// depuis "En savoir plus" — même mécanisme que TopicJsonModal, mais
+// s'appuie directement sur PATCH /api/admin/formateurs/{id} (toujours mise à
+// jour CE formateur, quel que soit le champ "id" présent dans le JSON collé).
+function FormateurJsonModal({ formateur, onClose, onImported }) {
+  const [tab, setTab] = useState('export');
+  const [importText, setImportText] = useState(JSON.stringify(formateur, null, 2));
+  const [log, setLog] = useState([]);
+  const [importing, setImporting] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const exportText = JSON.stringify(formateur, null, 2);
+
+  async function copyExport() {
+    try {
+      await navigator.clipboard.writeText(exportText);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      // Le presse-papiers peut être indisponible (contexte non sécurisé) — l'admin peut copier manuellement.
+    }
+  }
+
+  async function runImport() {
+    setLog([]);
+    let parsed;
+    try {
+      parsed = JSON.parse(importText);
+      if (Array.isArray(parsed)) parsed = parsed[0];
+      if (!parsed || typeof parsed !== 'object') throw new Error('Le JSON doit être un objet : { "name": "…", … }');
+    } catch (err) {
+      setLog([`✗ JSON invalide — ${err.message}`]);
+      return;
+    }
+    if (!parsed.name?.trim?.()) { setLog(['✗ Le nom est requis']); return; }
+    if (!parsed.email?.trim?.()) { setLog(["✗ L'email est requis"]); return; }
+
+    setImporting(true);
+    try {
+      const res = await fetch(`/api/admin/formateurs/${formateur.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: parsed.name,
+          email: parsed.email,
+          bio: parsed.bio ?? '',
+          specialties: parsed.specialties ?? '',
+          photoUrl: parsed.photoUrl ?? '',
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Erreur serveur');
+      setLog([`✓ ${data.formateur.name} — mis à jour (id: ${data.formateur.id})`]);
+      onImported(data.formateur);
+    } catch (err) {
+      setLog((l) => [...l, `✗ ${err.message}`]);
+    } finally {
+      setImporting(false);
+    }
+  }
+
+  return (
+    <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="modal" style={{ maxWidth: 680, maxHeight: '85vh', overflowY: 'auto' }}>
+        <button className="modal-close" onClick={onClose}>✕</button>
+        <h2>Export / Import — {formateur.name}</h2>
+
+        <div style={{ display: 'flex', gap: 8, marginTop: 16, marginBottom: 12 }}>
+          <button type="button" className={`btn btn-sm ${tab === 'export' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setTab('export')}>Export</button>
+          <button type="button" className={`btn btn-sm ${tab === 'import' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setTab('import')}>Import</button>
+        </div>
+
+        {tab === 'export' ? (
+          <>
+            <p style={{ color: 'var(--text-muted)', fontSize: 13, marginBottom: 8 }}>
+              Copiez ce JSON pour sauvegarder ou dupliquer ce formateur ailleurs.
+            </p>
+            <textarea
+              className="form-input"
+              readOnly
+              rows={14}
+              value={exportText}
+              onFocus={(e) => e.target.select()}
+              style={{ fontFamily: 'monospace', fontSize: 12 }}
+            />
+            <div className="modal-actions">
+              <button type="button" className="btn btn-ghost" onClick={onClose}>Fermer</button>
+              <button type="button" className="btn btn-primary" onClick={copyExport}>{copied ? 'Copié ✓' : 'Copier'}</button>
+            </div>
+          </>
+        ) : (
+          <>
+            <p style={{ color: 'var(--text-muted)', fontSize: 13, marginBottom: 8 }}>
+              Collez le JSON de ce formateur (modifié si besoin) pour le mettre à jour. Le champ « id » est ignoré :
+              cela met toujours à jour CE formateur, jamais n'en crée un autre.
+            </p>
+            <textarea
+              className="form-input"
+              rows={14}
+              value={importText}
+              onChange={(e) => setImportText(e.target.value)}
+              style={{ fontFamily: 'monospace', fontSize: 12 }}
+            />
+            {log.length > 0 && (
+              <div style={{ marginTop: 12, background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, padding: 12, fontFamily: 'monospace', fontSize: 12 }}>
+                {log.map((line, i) => (
+                  <div key={i} style={{ color: line.startsWith('✗') ? 'var(--red)' : 'var(--green)' }}>{line}</div>
+                ))}
+              </div>
+            )}
+            <div className="modal-actions">
+              <button type="button" className="btn btn-ghost" onClick={onClose}>Fermer</button>
+              <button type="button" className="btn btn-primary" onClick={runImport} disabled={importing || !importText.trim()}>
+                {importing ? 'Import…' : 'Importer'}
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // Popup public "En savoir plus" pour un formateur.
-function FormateurDetailModal({ formateur, onClose }) {
+function FormateurDetailModal({ formateur, isAdmin, onClose, onSaved }) {
+  const [showJson, setShowJson] = useState(false);
   const specialtyTags = (formateur.specialties || '').split(',').map((s) => s.trim()).filter(Boolean);
   return (
+    <>
     <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className="modal" style={{ maxWidth: 480, maxHeight: '85vh', overflowY: 'auto' }}>
         <button className="modal-close" onClick={onClose}>✕</button>
+        {isAdmin && (
+          <button
+            type="button"
+            className="link-btn"
+            onClick={() => setShowJson(true)}
+            style={{ position: 'absolute', top: 22, right: 52, fontSize: 13, whiteSpace: 'nowrap' }}
+          >
+            ⇅ Export / Import JSON
+          </button>
+        )}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 8 }}>
           {formateur.photoUrl ? (
             <img src={formateur.photoUrl} alt={formateur.name} className="formateur-photo" style={{ width: 96, height: 96 }} />
@@ -1207,6 +1342,14 @@ function FormateurDetailModal({ formateur, onClose }) {
         </div>
       </div>
     </div>
+    {showJson && (
+      <FormateurJsonModal
+        formateur={formateur}
+        onClose={() => setShowJson(false)}
+        onImported={(f) => { onSaved?.(f); setShowJson(false); }}
+      />
+    )}
+    </>
   );
 }
 
@@ -1268,7 +1411,7 @@ function FormateurCard({ formateur, isAdmin, onSaved }) {
         )}
       </div>
 
-      {showDetail && <FormateurDetailModal formateur={formateur} onClose={() => setShowDetail(false)} />}
+      {showDetail && <FormateurDetailModal formateur={formateur} isAdmin={isAdmin} onClose={() => setShowDetail(false)} onSaved={onSaved} />}
       {showEdit && <FormateurFormModal formateur={formateur} onClose={() => setShowEdit(false)} onSaved={onSaved} />}
     </div>
   );
