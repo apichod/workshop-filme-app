@@ -695,12 +695,21 @@ footer.page-footer { color: var(--text-muted); font-size: 13px; padding-top: 20p
 }
 .user-menu-item {
   display: block;
+  width: 100%;
   padding: 8px 12px;
   font-size: 14px;
   color: var(--text);
   text-decoration: none;
   border-radius: 6px;
   white-space: nowrap;
+  /* Repli pour les entrées <button> (ex. "Mes inscriptions", qui ouvre une
+     popup au lieu de naviguer) — annule les styles par défaut du navigateur
+     pour qu'un <button> rende identique à un <a> ici. */
+  background: none;
+  border: none;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
 }
 .user-menu-item:hover { background: var(--card-bg); text-decoration: none; }
 
