@@ -1101,6 +1101,14 @@ function normalizeAvailability(a) {
 
 const CAL_MONTH_LABELS = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
 const CAL_WEEKDAY_LABELS = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
+// Indexé par Date.getDay() (0 = dimanche ... 6 = samedi) — pour retrouver la
+// clé WEEKDAYS (et donc les créneaux récurrents applicables) d'une date du calendrier.
+const JS_DAY_TO_WEEKDAY_KEY = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'];
+
+function weekdayKeyForDate(iso) {
+  const d = new Date(`${iso}T00:00:00`);
+  return JS_DAY_TO_WEEKDAY_KEY[d.getDay()];
+}
 
 function toIsoLocal(d) {
   const y = d.getFullYear();
@@ -1152,7 +1160,7 @@ function AvailabilityCalendar({ dates, onToggle }) {
               type="button"
               disabled={isPast}
               onClick={() => onToggle(iso)}
-              title={isSelected ? 'Retirer cette date de disponibilité' : 'Marquer disponible'}
+              title={isSelected ? 'Retirer — ne sera plus présent ce jour-là' : 'Marquer comme présent ce jour-là'}
               style={{
                 aspectRatio: '1',
                 display: 'flex',
@@ -1227,6 +1235,7 @@ function AvailabilityEditor({ value, onChange }) {
 
   return (
     <div>
+      <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 10 }}>Créneaux de disponibilité</div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         {WEEKDAYS.map((d) => (
           <div key={d.key} style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
@@ -1270,17 +1279,34 @@ function AvailabilityEditor({ value, onChange }) {
       <div style={{ marginTop: 16, paddingTop: 14, borderTop: '1px solid var(--border)' }}>
         <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>Dates de disponibilité</div>
         <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 8 }}>
-          Cliquez sur les jours du calendrier où il est disponible, en plus des créneaux récurrents ci-dessus.
+          Cochez les dates où il est présent — les horaires appliqués sont automatiquement ceux définis ci-dessus pour le jour de la semaine correspondant (ex : une date qui tombe un lundi applique les créneaux de « Lundi »).
         </div>
-        <div style={{ maxWidth: 320 }}>
+        <div style={{ maxWidth: 320, margin: '0 auto' }}>
           <AvailabilityCalendar dates={value.dates || []} onToggle={toggleDate} />
         </div>
+        {(value.dates || []).length > 0 && (
+          <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 4 }}>
+            {(value.dates || []).slice().sort().map((iso) => {
+              const slots = value[weekdayKeyForDate(iso)] || [];
+              return (
+                <div key={iso} style={{ fontSize: 12, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                  <span style={{ fontWeight: 600 }}>{formatSaturday(iso)}</span>
+                  {slots.length > 0 ? (
+                    <span style={{ color: 'var(--text-muted)' }}>{slots.map((s) => `${s.start}–${s.end}`).join(', ')}</span>
+                  ) : (
+                    <span style={{ color: 'var(--red)' }}>⚠ Aucun créneau défini pour ce jour de la semaine</span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       <div style={{ marginTop: 16, paddingTop: 14, borderTop: '1px solid var(--border)' }}>
         <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>Date spécifique (horaire particulier)</div>
         <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 8 }}>
-          Pour une date précise avec un horaire différent — remplace, pour cette date, les créneaux récurrents et les dates de disponibilité ci-dessus.
+          Pour une date précise avec un horaire différent — remplace, pour cette date, les créneaux hebdomadaires et la présence confirmée via le calendrier ci-dessus.
         </div>
         {(value.dateOverrides || []).length > 0 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 8, alignItems: 'flex-start' }}>
