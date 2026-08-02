@@ -414,7 +414,7 @@ function TopicCard({ topic, index, isAdmin, onOpenRegister, onSaved, onDeleted }
         )}
         <button type="button" className="link-btn" onClick={() => setShowDetail(true)}>En savoir plus</button>
         {isAdmin && (
-          <>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             <button type="button" className="btn btn-ghost btn-sm" onClick={() => setShowEdit(true)}>✏️ Éditer</button>
             <button type="button" className="btn btn-ghost btn-sm" onClick={toggleArchived} disabled={archiving}>
               {archiving ? '…' : topic.archived ? 'Désarchiver' : 'Archiver'}
@@ -424,7 +424,7 @@ function TopicCard({ topic, index, isAdmin, onOpenRegister, onSaved, onDeleted }
                 {deleting ? '…' : 'Supprimer'}
               </button>
             )}
-          </>
+          </div>
         )}
       </div>
 
