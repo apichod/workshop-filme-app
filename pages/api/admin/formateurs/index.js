@@ -1,6 +1,16 @@
 import { requireAuth } from '../../../../lib/auth';
 import { getAllFormateurs, createFormateur } from '../../../../lib/formateurs';
 
+// Convertit une valeur quelconque (chaîne, tableau de tags collé par erreur
+// via l'import JSON, null…) en texte propre — évite un crash sur .trim()
+// quand le JSON importé donne par ex. "specialties": ["Caméra", "Audio"]
+// au lieu d'une chaîne "Caméra, Audio".
+function toText(v) {
+  if (v == null) return '';
+  if (Array.isArray(v)) return v.join(', ').trim();
+  return String(v).trim();
+}
+
 export default requireAuth(async function handler(req, res) {
   if (req.method === 'GET') {
     try {
@@ -14,17 +24,17 @@ export default requireAuth(async function handler(req, res) {
 
   if (req.method === 'POST') {
     const { name, email, phone, bio, bioLong, specialties, photoUrl, availability } = req.body || {};
-    if (!name?.trim()) return res.status(400).json({ error: 'Le nom est requis' });
-    if (!email?.trim()) return res.status(400).json({ error: "L'email est requis" });
+    if (!toText(name)) return res.status(400).json({ error: 'Le nom est requis' });
+    if (!toText(email)) return res.status(400).json({ error: "L'email est requis" });
     try {
       const formateur = await createFormateur({
-        name: name.trim(),
-        email: email.trim(),
-        phone: (phone || '').trim(),
-        bio: (bio || '').trim(),
-        bioLong: (bioLong || '').trim(),
-        specialties: (specialties || '').trim(),
-        photoUrl: (photoUrl || '').trim(),
+        name: toText(name),
+        email: toText(email),
+        phone: toText(phone),
+        bio: toText(bio),
+        bioLong: toText(bioLong),
+        specialties: toText(specialties),
+        photoUrl: toText(photoUrl),
         availability,
       });
       return res.status(200).json({ formateur });

@@ -1,22 +1,32 @@
 import { requireAuth } from '../../../../lib/auth';
 import { updateFormateur, deleteFormateur } from '../../../../lib/formateurs';
 
+// Convertit une valeur quelconque (chaîne, tableau de tags collé par erreur
+// via l'import JSON, null…) en texte propre — évite un crash sur .trim()
+// quand le JSON importé donne par ex. "specialties": ["Caméra", "Audio"]
+// au lieu d'une chaîne "Caméra, Audio".
+function toText(v) {
+  if (v == null) return '';
+  if (Array.isArray(v)) return v.join(', ').trim();
+  return String(v).trim();
+}
+
 export default requireAuth(async function handler(req, res) {
   const { id } = req.query;
 
   if (req.method === 'PATCH') {
     const { name, email, phone, bio, bioLong, specialties, photoUrl, availability, archived } = req.body || {};
-    if (name !== undefined && !name.trim()) return res.status(400).json({ error: 'Le nom est requis' });
-    if (email !== undefined && !email.trim()) return res.status(400).json({ error: "L'email est requis" });
+    if (name !== undefined && !toText(name)) return res.status(400).json({ error: 'Le nom est requis' });
+    if (email !== undefined && !toText(email)) return res.status(400).json({ error: "L'email est requis" });
     try {
       const formateur = await updateFormateur(id, {
-        name: name !== undefined ? name.trim() : undefined,
-        email: email !== undefined ? email.trim() : undefined,
-        phone: phone !== undefined ? phone.trim() : undefined,
-        bio: bio !== undefined ? bio.trim() : undefined,
-        bioLong: bioLong !== undefined ? bioLong.trim() : undefined,
-        specialties: specialties !== undefined ? specialties.trim() : undefined,
-        photoUrl: photoUrl !== undefined ? photoUrl.trim() : undefined,
+        name: name !== undefined ? toText(name) : undefined,
+        email: email !== undefined ? toText(email) : undefined,
+        phone: phone !== undefined ? toText(phone) : undefined,
+        bio: bio !== undefined ? toText(bio) : undefined,
+        bioLong: bioLong !== undefined ? toText(bioLong) : undefined,
+        specialties: specialties !== undefined ? toText(specialties) : undefined,
+        photoUrl: photoUrl !== undefined ? toText(photoUrl) : undefined,
         availability,
         archived: archived !== undefined ? !!archived : undefined,
       });

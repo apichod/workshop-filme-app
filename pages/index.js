@@ -1560,7 +1560,7 @@ function FormateurJsonModal({ formateur, onClose, onImported }) {
           phone: parsed.phone ?? '',
           bio: parsed.bio ?? '',
           bioLong: parsed.bioLong ?? '',
-          specialties: parsed.specialties ?? '',
+          specialties: Array.isArray(parsed.specialties) ? parsed.specialties.join(', ') : (parsed.specialties ?? ''),
           photoUrl: parsed.photoUrl ?? '',
           availability: normalizeAvailability(parsed.availability),
         }),
