@@ -109,13 +109,13 @@ function HeroSlideEditor({ isAdmin, hero, onChange }) {
 
   return (
     <div className="hero-copy">
-      <EditableText isAdmin={isAdmin} tag="h1" value={hero.title} onSave={(v) => onChange({ title: v })} />
-      <EditableText isAdmin={isAdmin} tag="p" className="lead" multiline value={hero.lead} onSave={(v) => onChange({ lead: v })} />
+      <EditableText isAdmin={isAdmin} dark tag="h1" value={hero.title} onSave={(v) => onChange({ title: v })} />
+      <EditableText isAdmin={isAdmin} dark tag="p" className="lead" multiline value={hero.lead} onSave={(v) => onChange({ lead: v })} />
       <div className="hero-stats">
         {bullets.map((b, i) => (
           <div className="stat-item" key={i}>
             <BulletIconPicker isAdmin={isAdmin} icon={b.icon || 'users'} onChange={(name) => updateBullet(i, { icon: name })} />
-            <EditableText isAdmin={isAdmin} tag="strong" value={b.text} onSave={(v) => updateBullet(i, { text: v })} />
+            <EditableText isAdmin={isAdmin} dark tag="strong" value={b.text} onSave={(v) => updateBullet(i, { text: v })} />
           </div>
         ))}
       </div>
@@ -132,7 +132,7 @@ function HeroSlideEditor({ isAdmin, hero, onChange }) {
           {isAdmin && (
             <span className="hero-cta-link-edit">
               Lien :{' '}
-              <EditableText isAdmin={isAdmin} tag="span" value={hero.ctaLink || ''} onSave={(v) => onChange({ ctaLink: v })} />
+              <EditableText isAdmin={isAdmin} dark tag="span" value={hero.ctaLink || ''} onSave={(v) => onChange({ ctaLink: v })} />
             </span>
           )}
         </div>
@@ -172,7 +172,7 @@ function topicStatusLabel(topic, sessions) {
 }
 
 // ─── Texte éditable en place (mode admin uniquement) ─────────────────────────
-function EditableText({ isAdmin, value, onSave, tag: Tag = 'span', multiline = false, className, style }) {
+function EditableText({ isAdmin, value, onSave, tag: Tag = 'span', multiline = false, className, style, dark = false }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value);
   const [loading, setLoading] = useState(false);
@@ -182,6 +182,10 @@ function EditableText({ isAdmin, value, onSave, tag: Tag = 'span', multiline = f
   }
 
   if (editing) {
+    // Contrôles d'édition admin : simple texte (blanc sur fond sombre comme le
+    // Hero, noir ailleurs), pas de boutons pleins — ceux-ci restent réservés
+    // à l'interface visiteur (S'inscrire, etc.).
+    const actionColor = dark ? '#fff' : 'var(--text)';
     return (
       <span style={{ display: 'inline-flex', flexDirection: multiline ? 'column' : 'row', gap: 6, alignItems: multiline ? 'stretch' : 'center', width: multiline ? '100%' : 'auto', maxWidth: '100%' }}>
         {multiline ? (
@@ -189,11 +193,12 @@ function EditableText({ isAdmin, value, onSave, tag: Tag = 'span', multiline = f
         ) : (
           <input className="form-input" value={draft} onChange={(e) => setDraft(e.target.value)} autoFocus style={{ minWidth: 220 }} />
         )}
-        <span style={{ display: 'flex', gap: 6 }}>
-          <button type="button" className="btn btn-ghost btn-sm" onClick={() => { setDraft(value); setEditing(false); }}>Annuler</button>
+        <span style={{ display: 'flex', gap: 12 }}>
+          <button type="button" className="link-btn" style={{ color: actionColor }} onClick={() => { setDraft(value); setEditing(false); }}>Annuler</button>
           <button
             type="button"
-            className="btn btn-primary btn-sm"
+            className="link-btn"
+            style={{ color: actionColor, fontWeight: 700 }}
             disabled={loading}
             onClick={async () => {
               setLoading(true);
@@ -2297,7 +2302,7 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
     }
 
     requestAnimationFrame(() => {
-      document.getElementById('formations')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      document.getElementById('evenements')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -2738,7 +2743,7 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
           </div>
         </section>
 
-        <section className="section" id="formations" style={{ scrollMarginTop: 24 }}>
+        <section className="section" id="evenements" style={{ scrollMarginTop: 24 }}>
           <div className="section-head" style={{ alignItems: 'flex-start', justifyContent: 'space-between' }}>
             <div>
               <EditableText isAdmin={isAdmin} tag="h2" value={content.topics_heading} onSave={(v) => saveContent('topics_heading', v)} />
