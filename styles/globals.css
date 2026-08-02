@@ -614,13 +614,14 @@ h1, h2, h3, .section-head h2, .topic-card h3 { font-family: var(--font-heading-f
 .topic-card p { color: var(--text-muted); font-size: 15px; flex: 1; }
 .topic-card .level { font-size: 12px; color: var(--text-muted); border-top: 1px solid var(--border); padding-top: 10px; }
 
-/* Conteneur de chaque carte dans la grille (nécessaire pour le glisser-déposer,
-   cf. topicReorderEnabled) — doit lui-même s'étirer sur toute la hauteur de la
-   ligne (comportement par défaut de la grille) puis étirer .topic-card à
-   l'intérieur, sinon toutes les cartes d'une même ligne n'ont plus la même
-   hauteur dès qu'une carte a plus de contenu (ex : bonus exclusif). */
+/* Conteneur de chaque carte dans une grille réorganisable par glisser-déposer
+   (formations "En vedette" et formateurs) — doit lui-même s'étirer sur toute
+   la hauteur de la ligne (comportement par défaut de la grille) puis étirer
+   la carte à l'intérieur, sinon toutes les cartes d'une même ligne n'ont plus
+   la même hauteur dès que l'une d'elles a plus de contenu. */
 .topic-card-slot { display: flex; }
-.topic-card-slot .topic-card { flex: 1; }
+.topic-card-slot .topic-card,
+.topic-card-slot .formateur-card { flex: 1; }
 
 /* Réorganisation manuelle (glisser-déposer) du catalogue, tri "En vedette". */
 .topic-card-draggable { cursor: grab; }

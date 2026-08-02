@@ -2269,6 +2269,7 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
   const [topicSort, setTopicSort] = useState(''); // '' = "En vedette" (ordre manuel, sort_order), 'newest', 'price_desc', 'price_asc', 'popular'
   const [topicPage, setTopicPage] = useState(1); // pagination du catalogue (TOPICS_PAGE_SIZE par page)
   const [draggingTopicId, setDraggingTopicId] = useState(null); // id de la carte en cours de glisser-déposer (réorganisation "En vedette")
+  const [draggingFormateurId, setDraggingFormateurId] = useState(null); // idem pour la grille "Nos formateurs"
   // Le glisser-déposer ne fait sens que sur l'ordre manuel complet et non
   // filtré (tri "En vedette", aucun filtre actif) — sinon la position visuelle
   // ne correspond plus à un ordre qu'on peut réellement persister.
@@ -2356,13 +2357,17 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
   // `topics` avant d'envoyer l'ordre entier à l'API (cf. reorderTopics).
   function handleTopicDrop(droppedId, targetId) {
     if (!topicReorderEnabled || droppedId === targetId) return;
-    const order = pageTopics.map((t) => t.id);
+    // Se base sur l'ordre complet filtré (pas seulement la page affichée) pour
+    // permettre de déposer une formation sur une carte d'une autre page (la
+    // page se change automatiquement en survolant un numéro de page pendant
+    // le glisser, cf. onDragEnter sur .topics-page-btn).
+    const order = filteredTopics.map((t) => t.id);
     const fromIdx = order.indexOf(droppedId);
     const toIdx = order.indexOf(targetId);
     if (fromIdx === -1 || toIdx === -1) return;
     order.splice(toIdx, 0, order.splice(fromIdx, 1)[0]);
 
-    const slotIndices = pageTopics.map((t) => topics.findIndex((x) => x.id === t.id)).sort((a, b) => a - b);
+    const slotIndices = filteredTopics.map((t) => topics.findIndex((x) => x.id === t.id)).sort((a, b) => a - b);
     const newTopics = [...topics];
     slotIndices.forEach((slot, i) => {
       newTopics[slot] = topics.find((t) => t.id === order[i]);
@@ -2421,6 +2426,25 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
   }
   function removeFormateurFromList(id) {
     setFormateurs((list) => list.filter((f) => f.id !== id));
+  }
+
+  // Réorganisation manuelle (glisser-déposer) des formateurs — même principe
+  // que handleTopicDrop, sans pagination ici donc pas besoin de distinguer
+  // liste affichée / liste complète.
+  function handleFormateurDrop(droppedId, targetId) {
+    if (!isAdmin || droppedId === targetId) return;
+    const order = formateurs.map((f) => f.id);
+    const fromIdx = order.indexOf(droppedId);
+    const toIdx = order.indexOf(targetId);
+    if (fromIdx === -1 || toIdx === -1) return;
+    order.splice(toIdx, 0, order.splice(fromIdx, 1)[0]);
+    const newFormateurs = order.map((id) => formateurs.find((f) => f.id === id));
+    setFormateurs(newFormateurs);
+    fetch('/api/admin/formateurs/reorder', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ orderedIds: order }),
+    }).catch(() => {});
   }
 
   async function saveContent(key, value) {
@@ -2878,6 +2902,8 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
                       type="button"
                       className={`topics-page-btn ${p === safeTopicPage ? 'active' : ''}`}
                       onClick={() => setTopicPage(p)}
+                      onDragOver={(e) => { if (draggingTopicId) e.preventDefault(); }}
+                      onDragEnter={() => { if (draggingTopicId && p !== safeTopicPage) setTopicPage(p); }}
                     >
                       {p}
                     </button>
@@ -2899,7 +2925,18 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
             </div>
             <div className="formateurs-grid">
               {formateurs.map((f) => (
-                <FormateurCard key={f.id} formateur={f} isAdmin={isAdmin} onSaved={updateFormateurInList} topics={topics} onTopicUpdated={updateTopicInList} />
+                <div
+                  key={f.id}
+                  draggable={isAdmin}
+                  onDragStart={() => setDraggingFormateurId(f.id)}
+                  onDragOver={(e) => { if (isAdmin) e.preventDefault(); }}
+                  onDrop={() => { if (draggingFormateurId) handleFormateurDrop(draggingFormateurId, f.id); setDraggingFormateurId(null); }}
+                  onDragEnd={() => setDraggingFormateurId(null)}
+                  className={`topic-card-slot ${isAdmin ? 'topic-card-draggable' : ''}`}
+                  style={draggingFormateurId === f.id ? { opacity: 0.4 } : undefined}
+                >
+                  <FormateurCard formateur={f} isAdmin={isAdmin} onSaved={updateFormateurInList} topics={topics} onTopicUpdated={updateTopicInList} />
+                </div>
               ))}
             </div>
           </section>
