@@ -1567,6 +1567,11 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
                   ))}
                 </select>
                 {modalTopic && (
+                  <div className="modal-sub" style={{ marginTop: 6 }}>
+                    {modalTopic.type || 'Formation'} · {formatPrice(modalTopic.price)} · {modalTopic.maxParticipants || CAPACITY} places maximum
+                  </div>
+                )}
+                {modalTopic && (
                   <button
                     type="button"
                     className="link-btn"
@@ -1575,17 +1580,6 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
                   >
                     <Icon name="info" size={13} /> En savoir plus sur cet événement
                   </button>
-                )}
-                {modalTopic && (
-                  <div className="modal-sub" style={{ marginTop: 6 }}>
-                    {modalTopic.type || 'Formation'} · {formatPrice(modalTopic.price)} · {modalTopic.maxParticipants || CAPACITY} places maximum
-                    {!modalTopic.fixedDate && (
-                      <>
-                        <br />
-                        Dates flexibles : choisis tes dispos pour cette formation et si une date atteint le minimum d'inscriptions requises elle sera confirmée.
-                      </>
-                    )}
-                  </div>
                 )}
               </div>
 
@@ -1606,6 +1600,9 @@ export default function Home({ initialSessions, initialTopics, initialContent, i
                   <label className="form-label">
                     Date(s) souhaitée(s) ({modal.dates.length} sélectionné{modal.dates.length > 1 ? 's' : ''})
                   </label>
+                  <p className="modal-sub" style={{ margin: '-4px 0 2px' }}>
+                    Dates flexibles : choisis tes dispos pour cette formation et si une date atteint le minimum d'inscriptions requises elle sera confirmée.
+                  </p>
                   <div className="checkbox-list">
                     {modalDates.map((d) => {
                       // Un seul évènement par date : les dates déjà validées pour une
